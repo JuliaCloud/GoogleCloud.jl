@@ -55,10 +55,12 @@ type APIMethod
     path::String
     description::String
     default_params::Dict{Symbol, Any}
+    transform::Function
     function APIMethod(verb::Symbol, path::String, description::String,
-        default_params::Dict=Dict{Symbol, Any}()
+        default_params::Dict=Dict{Symbol, Any}();
+        transform=(x, t) -> x
     )
-        new(verb, path, description, default_params)
+        new(verb, path, description, default_params, transform)
     end
 end
 function print(io::IO, x::APIMethod)
@@ -76,14 +78,15 @@ REST hierarchy.
 type APIResource
     path::String
     methods::Dict{Symbol, APIMethod}
-    function APIResource(path::String; methods...)
+    transform::Union{Function, DataType}
+    function APIResource(path::String, transform=identity; methods...)
         if isempty(path)
             throw(APIError("Resource path can not be empty."))
         end
         if isempty(methods)
             throw(APIError("Resource must have at least one method."))
         end
-        new(path, Dict{Symbol, APIMethod}(methods))
+        new(path, Dict{Symbol, APIMethod}(methods), transform)
     end
 end
 function print(io::IO, x::APIResource)
@@ -174,19 +177,20 @@ function (api::APIRoot)(resource_name::Symbol, method_name::Symbol, args...; kwa
     if session == nothing
         throw(SessionError("Cannot use API without a session."))
     end
-    execute(method, session, args...; kwargs...)
+    execute(session, resource, method, args...; kwargs...)
 end
 
 """
-    execute(method::APIMethod, session::GoogleSession, path_args::String...[; ...])
+    execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::String...[; ...])
 
 Execute a method against the provided path arguments.
 
 Optionally provide parameters and data (with optional MIME content-type).
 """
-function execute(method::APIMethod, session::GoogleSession,
+function execute(session::GoogleSession, resource::APIResource, method::APIMethod,
     path_args::String...;
-    data::Any=nothing, content_type::String="application/json", debug=false,
+    data::Any=nothing, content_type::String="application/json",
+    debug=false, raw=false,
     params...
 )
     # check if data provided when not expected
@@ -225,21 +229,21 @@ function execute(method::APIMethod, session::GoogleSession,
         URIParser.URI(path_replace(method.path, path_args)), string(method.verb);
         query=params, data=data, headers=headers
     )
+
     if debug
         info("\n" * join(("  $name: $value" for (name, value) in sort(collect(res.headers))), "\n"))
+        info(String(res.data))
     end
 
     # if response is JSON, parse and return. otherwise, just dump data
-    if contains(res.headers["Content-Type"], "application/json")
-        Requests.json(res; dicttype=Dict{Symbol, Any})
+    if res.headers["Content-Length"] == "0"
+        nothing
+    elseif contains(res.headers["Content-Type"], "application/json")
+        result = Requests.json(res; dicttype=Dict{Symbol, Any})
+        raw ? result : method.transform(result, resource.transform)
     else
-        result = Requests.readall(res)
-        status = Requests.statuscode(res)
-        if status == 200
-            result
-        else
-            Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
-        end
+        result, status = Requests.readall(res), Requests.statuscode(res)
+        status == 200 ? result : Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
     end
 end
 
