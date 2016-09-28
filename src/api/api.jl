@@ -155,6 +155,7 @@ forget session.
 """
 function set_session(api::APIRoot, session::Union{GoogleSession, Void})
     api.default_session = session
+    nothing
 end
 
 function (api::APIRoot)(resource_name::Symbol)
