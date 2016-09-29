@@ -21,3 +21,9 @@ docs_dir: 'build'
 
 pages:
   - Home: index.md
+  - API Documentation:
+    - Credentials: credentials.md
+    - Sessions: session.md
+    - API Representation: api.md
+    - API Root URLs: root.md
+    - Error Types: error.md
