@@ -67,27 +67,6 @@
                 
                     <li><a class="toctree-l4" href="#quick-start">Quick Start</a></li>
                 
-            
-                <li class="toctree-l3"><a href="#pretty-print">Pretty print</a></li>
-                
-            
-                <li class="toctree-l3"><a href="#verify-the-new-bucket-exists-in-the-project">Verify the new bucket exists in the project</a></li>
-                
-            
-                <li class="toctree-l3"><a href="#string-containing-the-contents-of-test_imagejpg-the-semi-colon-avoids-an-error-caused-by-printing-the-returned-value">String containing the contents of test_image.jpg. The semi-colon avoids an error caused by printing the returned value.</a></li>
-                
-            
-                <li class="toctree-l3"><a href="#upload">Upload</a></li>
-                
-            
-                <li class="toctree-l3"><a href="#verify-that-the-object-is-in-the-bucket">Verify that the object is in the bucket</a></li>
-                
-            
-                <li class="toctree-l3"><a href="#verify-that-the-bucket-is-now-empty">Verify that the bucket is now empty</a></li>
-                
-            
-                <li class="toctree-l3"><a href="#verify-that-the-bucket-has-been-deleted">Verify that the bucket has been deleted</a></li>
-                
                     <li><a class="toctree-l4" href="#api-documentation">API Documentation</a></li>
                 
                     <li><a class="toctree-l4" href="#index">Index</a></li>
@@ -184,13 +163,17 @@
 <p><a id='Quick-Start-1'></a></p>
 <h2 id="quick-start">Quick Start</h2>
 <p>This Quick Start walks through the steps required to store and retrieve data from Google Cloud Storage.</p>
+<p><a id='Google-Cloud-Prerequisites-1'></a></p>
+<h3 id="google-cloud-prerequisites">Google Cloud Prerequisites</h3>
 <ol>
 <li>If you don't already have a Google account, create one <a href="https://accounts.google.com/SignUp?hl=en">here</a>.</li>
 <li>Sign in to the GCP console <a href="https://console.cloud.google.com/">here</a>.</li>
 <li>
 <p>Create a new project by clicking on the <strong>Project</strong> drop-down menu at the top of the page. If you already have a GCP project, click on the drop-down menu at the top of the page and select <strong>Create project</strong>.</p>
-<p>A GCP project is a set of resources with common settings that is billed and managed separately from any resource outside the set. Thus a resource exists in exactly one project. Examples of resources include GCE instances, storage volumes and data on those volumes. A project's settings include ownership, users and their permissions, and associated GCP services. As a user anything you do on GCP happens within a project, including data storage, compute, messaging, logging, etc.
-4. Associated with your project are credentials that allow users to add, read and remove resources from the project. Get the credentials for your project as a JSON file from your <a href="https://console.cloud.google.com/apis/credentials">GCP Credentials</a> page:</p>
+<p>A GCP project is a set of resources with common settings that is billed and  managed separately from any resource outside the set. Thus a resource  exists in exactly one project. Examples of resources include GCE instances,  storage volumes and data on those volumes. A project's settings include  ownership, users and their permissions, and associated GCP services. As a  user anything you do on GCP happens within a project, including data  storage, compute, messaging, logging, etc.</p>
+</li>
+<li>
+<p>Associated with your project are credentials that allow users to add, read and remove resources from the project. Get the credentials for your project as a JSON file from your <a href="https://console.cloud.google.com/apis/credentials">GCP Credentials</a> page:</p>
 <ul>
 <li>Type <em>credentials</em> into the search bar at the top of the console.</li>
 <li>Select <strong>Credentials API Manager</strong> from the search results.</li>
@@ -200,78 +183,92 @@
 <li>Ensure the key type is JSON.</li>
 <li>Click <strong>Create</strong>.</li>
 </ul>
-<p>Credentials are then automatically downloaded in a JSON file. Save this file to your machine. In this tutorial we save the service account credentials to <code>~/credentials.json</code>.
-5. Start Julia and install the <a href="https://github.com/joshbode/GoogleCloud.jl">GoogleCloud.jl</a> package.</p>
-<p><code>julia
-Pkg.add("GoogleCloud")
-using GoogleCloud</code>
-6. Load the service account credentials.</p>
-<p><code>julia
-creds = GoogleCredentials(expanduser("~/credentials.json"))</code>
-7. Create a session with the credentials, requesting any required scopes.</p>
-<p><code>julia
-session = GoogleSession(creds, ["devstorage.full_control"])</code>
-8. Set the default session of an API using <code>set_session</code></p>
-<p><code>julia
-set_session(storage, session)    # storage is a variable exported from GoogleCloud.jl</code>
-9. List all existing buckets in your project. The list contains a default bucket.</p>
-<p>```julia
-bkts = storage(:Bucket, :list)    # storage(:Bucket, :list; raw=true) returns addition information</p>
-<h1 id="pretty-print">Pretty print</h1>
-<p>for item in bkts
-    display(item)
-    println()
-end
-```
-10. Create a bucket called <em>a12345foo</em>. <strong>Note</strong>: The bucket name must be unique...across all buckets in GCP!</p>
-<p>```julia
-storage(:Bucket, :insert; data=Dict(:name =&gt; "a12345foo"))</p>
-<h1 id="verify-the-new-bucket-exists-in-the-project">Verify the new bucket exists in the project</h1>
-<p>bkts = storage(:Bucket, :list)
-for item in bkts
-    display(item)
-    println()
-end
-```
-11. List all objects in the <em>a12345foo</em> bucket. The list is currently empty.</p>
-<p><code>julia
-storage(:Object, :list, "a12345foo")</code>
-12. Upload an object to the <em>a12345foo</em> bucket.</p>
-<p>```julia</p>
-<h1 id="string-containing-the-contents-of-test_imagejpg-the-semi-colon-avoids-an-error-caused-by-printing-the-returned-value">String containing the contents of test_image.jpg. The semi-colon avoids an error caused by printing the returned value.</h1>
-<p>file_contents = readstring(open("test_image.jpg", "r"));</p>
-<h1 id="upload">Upload</h1>
-<p>storage(:Object, :insert, "a12345foo";     # Returns metadata about the object
-    name="image.jpg",           # Object name is "image.jpg"
-    data=file_contents,         # The data being stored on your project
-    content_type="image/jpeg"   # The contents are specified to be in JPEG format
-)</p>
-<h1 id="verify-that-the-object-is-in-the-bucket">Verify that the object is in the bucket</h1>
-<p>obs = storage(:Object, :list, "a12345foo")    # Ugly print
-map(x -&gt; x[:name], obs)                       # Pretty print
-```
-13. Get the <em>image.jpg</em> object from the bucket.</p>
-<p><code>julia
-s = storage(:Object, :get, "a12345foo", "image.jpg");
-s == file_contents    # Verify that the retrieved data is the same as that originally posted</code>
-14. Delete the <em>image.jpg</em> object from the bucket.</p>
-<p>```julia
-storage(:Object, :delete, "a12345foo", "image.jpg")</p>
-<h1 id="verify-that-the-bucket-is-now-empty">Verify that the bucket is now empty</h1>
-<p>storage(:Object, :list, "a12345foo")
-```
-15. Delete the bucket.</p>
-<p>```julia
-storage(:Bucket, :delete, "a12345foo")</p>
-<h1 id="verify-that-the-bucket-has-been-deleted">Verify that the bucket has been deleted</h1>
-<p>bkts = storage(:Bucket, :list)
-for item in bkts
-    display(item)
-    println()
-end
-```</p>
+<p>Credentials are then automatically downloaded in a JSON file. Save this file to your machine. In this tutorial we save the service account credentials to <code>~/credentials.json</code>.</p>
 </li>
 </ol>
+<p><a id='Interacting-with-the-Storage-API-from-Julia-1'></a></p>
+<h3 id="interacting-with-the-storage-api-from-julia">Interacting with the Storage API from Julia</h3>
+<p>Start Julia and install the <a href="https://github.com/joshbode/GoogleCloud.jl">GoogleCloud.jl</a> package:</p>
+<pre><code class="julia">Pkg.add(&quot;GoogleCloud&quot;)
+using GoogleCloud
+</code></pre>
+
+<p>Load the service account credentials obtained from Google:</p>
+<pre><code class="julia">creds = GoogleCredentials(expanduser(&quot;~/credentials.json&quot;))
+</code></pre>
+
+<p>Now, create a session with the credentials, requesting any required scopes:</p>
+<pre><code class="julia">session = GoogleSession(creds, [&quot;devstorage.full_control&quot;])
+</code></pre>
+
+<p>Set the default session of an API using <code>set_session</code>:</p>
+<pre><code class="julia">set_session(storage, session)    # storage is the API root, exported from GoogleCloud.jl
+</code></pre>
+
+<p>List all existing buckets in your project. The list contains a default bucket:</p>
+<pre><code class="julia">bkts = storage(:Bucket, :list)    # storage(:Bucket, :list; raw=true) returns addition information
+
+# Pretty print
+for item in bkts
+    display(item)
+    println()
+end
+</code></pre>
+
+<p>Create a bucket called <em>a12345foo</em>, for example. <strong>Note</strong>: The bucket name must be unique... across all buckets in GCP, so choose your own!</p>
+<pre><code class="julia">storage(:Bucket, :insert; data=Dict(:name =&gt; &quot;a12345foo&quot;))
+
+# Verify the new bucket exists in the project
+bkts = storage(:Bucket, :list)
+for item in bkts
+    display(item)
+    println()
+end
+</code></pre>
+
+<p>List all objects in the <em>a12345foo</em> bucket. The list is currently empty:</p>
+<pre><code class="julia">storage(:Object, :list, &quot;a12345foo&quot;)
+</code></pre>
+
+<p>Upload an object to the <em>a12345foo</em> bucket:</p>
+<pre><code class="julia"># String containing the contents of test_image.jpg. The semi-colon avoids an error caused by printing the returned value.
+file_contents = readstring(open(&quot;test_image.jpg&quot;, &quot;r&quot;));
+
+# Upload
+storage(:Object, :insert, &quot;a12345foo&quot;;     # Returns metadata about the object
+    name=&quot;image.jpg&quot;,           # Object name is &quot;image.jpg&quot;
+    data=file_contents,         # The data being stored on your project
+    content_type=&quot;image/jpeg&quot;   # The contents are specified to be in JPEG format
+)
+
+# Verify that the object is in the bucket
+obs = storage(:Object, :list, &quot;a12345foo&quot;)    # Ugly print
+map(x -&gt; x[:name], obs)                       # Pretty print
+</code></pre>
+
+<p>Get the <em>image.jpg</em> object from the bucket:</p>
+<pre><code class="julia">s = storage(:Object, :get, &quot;a12345foo&quot;, &quot;image.jpg&quot;);
+s == file_contents    # Verify that the retrieved data is the same as that originally posted
+</code></pre>
+
+<p>Delete the <em>image.jpg</em> object from the bucket:</p>
+<pre><code class="julia">storage(:Object, :delete, &quot;a12345foo&quot;, &quot;image.jpg&quot;)
+
+# Verify that the bucket is now empty
+storage(:Object, :list, &quot;a12345foo&quot;)
+</code></pre>
+
+<p>Delete the bucket:</p>
+<pre><code class="julia">storage(:Bucket, :delete, &quot;a12345foo&quot;)
+
+# Verify that the bucket has been deleted
+bkts = storage(:Bucket, :list)
+for item in bkts
+    display(item)
+    println()
+end
+</code></pre>
+
 <p><a id='API-Documentation-1'></a></p>
 <h2 id="api-documentation">API Documentation</h2>
 <ul>
@@ -297,8 +294,8 @@ end
 <li><a href="api/api/#GoogleCloud.api.APIMethod"><code>GoogleCloud.api.APIMethod</code></a></li>
 <li><a href="api/api/#GoogleCloud.api.APIResource"><code>GoogleCloud.api.APIResource</code></a></li>
 <li><a href="api/api/#GoogleCloud.api.APIRoot"><code>GoogleCloud.api.APIRoot</code></a></li>
-<li><a href="api/credentials/#GoogleCloud.credentials.GoogleCredentials-Tuple{String}"><code>GoogleCloud.credentials.GoogleCredentials</code></a></li>
 <li><a href="api/credentials/#GoogleCloud.credentials.GoogleCredentials"><code>GoogleCloud.credentials.GoogleCredentials</code></a></li>
+<li><a href="api/credentials/#GoogleCloud.credentials.GoogleCredentials-Tuple{String}"><code>GoogleCloud.credentials.GoogleCredentials</code></a></li>
 <li><a href="api/credentials/#GoogleCloud.credentials.GoogleCredentials-Tuple{Dict{Symbol,String}}"><code>GoogleCloud.credentials.GoogleCredentials</code></a></li>
 <li><a href="api/error/#GoogleCloud.error.APIError"><code>GoogleCloud.error.APIError</code></a></li>
 <li><a href="api/error/#GoogleCloud.error.CredentialError"><code>GoogleCloud.error.CredentialError</code></a></li>
@@ -364,5 +361,5 @@ end
 
 <!--
 MkDocs version : 0.15.3
-Build Date UTC : 2016-09-29 03:28:50.743866
+Build Date UTC : 2016-09-29 04:16:58.019823
 -->
