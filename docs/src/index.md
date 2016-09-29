@@ -8,15 +8,29 @@ Currently only the Google Storage API has been added.
 
 This Quick Start walks through the steps required to store and retrieve data from Google Cloud Storage.
 
+### Google Cloud Prerequisites
+
 1. If you don't already have a Google account, create one [here](https://accounts.google.com/SignUp?hl=en).
 
 2. Sign in to the GCP console [here](https://console.cloud.google.com/).
 
-3. Create a new project by clicking on the **Project** drop-down menu at the top of the page. If you already have a GCP project, click on the drop-down menu at the top of the page and select **Create project**.
+3. Create a new project by clicking on the **Project** drop-down menu at the
+   top of the page. If you already have a GCP project, click on the drop-down
+   menu at the top of the page and select **Create project**.
 
-    A GCP project is a set of resources with common settings that is billed and managed separately from any resource outside the set. Thus a resource exists in exactly one project. Examples of resources include GCE instances, storage volumes and data on those volumes. A project's settings include ownership, users and their permissions, and associated GCP services. As a user anything you do on GCP happens within a project, including data storage, compute, messaging, logging, etc.
+    A GCP project is a set of resources with common settings that is billed and
+    managed separately from any resource outside the set. Thus a resource
+    exists in exactly one project. Examples of resources include GCE instances,
+    storage volumes and data on those volumes. A project's settings include
+    ownership, users and their permissions, and associated GCP services. As a
+    user anything you do on GCP happens within a project, including data
+    storage, compute, messaging, logging, etc.
 
-4. Associated with your project are credentials that allow users to add, read and remove resources from the project. Get the credentials for your project as a JSON file from your [GCP Credentials](https://console.cloud.google.com/apis/credentials) page:
+
+4. Associated with your project are credentials that allow users to add, read
+   and remove resources from the project. Get the credentials for your project
+   as a JSON file from your [GCP Credentials](https://console.cloud.google.com/apis/credentials)
+   page:
 
     - Type _credentials_ into the search bar at the top of the console.
     - Select **Credentials API Manager** from the search results.
@@ -28,108 +42,111 @@ This Quick Start walks through the steps required to store and retrieve data fro
 
     Credentials are then automatically downloaded in a JSON file. Save this file to your machine. In this tutorial we save the service account credentials to `~/credentials.json`.
 
-5. Start Julia and install the [GoogleCloud.jl](https://github.com/joshbode/GoogleCloud.jl) package.
+### Interacting with the Storage API from Julia
 
-   ```julia
-   Pkg.add("GoogleCloud")
-   using GoogleCloud
-   ```
+Start Julia and install the [GoogleCloud.jl](https://github.com/joshbode/GoogleCloud.jl) package:
 
-6. Load the service account credentials.
+```julia
+Pkg.add("GoogleCloud")
+using GoogleCloud
+```
 
-   ```julia
-   creds = GoogleCredentials(expanduser("~/credentials.json"))
-   ```
+Load the service account credentials obtained from Google:
 
-7. Create a session with the credentials, requesting any required scopes.
+```julia
+creds = GoogleCredentials(expanduser("~/credentials.json"))
+```
 
-   ```julia
-   session = GoogleSession(creds, ["devstorage.full_control"])
-   ```
+Now, create a session with the credentials, requesting any required scopes:
 
-8. Set the default session of an API using `set_session`
+```julia
+session = GoogleSession(creds, ["devstorage.full_control"])
+```
 
-   ```julia
-   set_session(storage, session)    # storage is a variable exported from GoogleCloud.jl
-   ```
+Set the default session of an API using `set_session`:
 
-9. List all existing buckets in your project. The list contains a default bucket.
+```julia
+set_session(storage, session)    # storage is the API root, exported from GoogleCloud.jl
+```
 
-   ```julia
-   bkts = storage(:Bucket, :list)    # storage(:Bucket, :list; raw=true) returns addition information
+List all existing buckets in your project. The list contains a default bucket:
 
-   # Pretty print
-   for item in bkts
-       display(item)
-       println()
-   end
-   ```
+```julia
+bkts = storage(:Bucket, :list)    # storage(:Bucket, :list; raw=true) returns addition information
 
-10. Create a bucket called _a12345foo_. **Note**: The bucket name must be unique...across all buckets in GCP!
+# Pretty print
+for item in bkts
+    display(item)
+    println()
+end
+```
 
-   ```julia
-   storage(:Bucket, :insert; data=Dict(:name => "a12345foo"))
+Create a bucket called _a12345foo_, for example. **Note**: The bucket name must
+be unique... across all buckets in GCP, so choose your own!
 
-   # Verify the new bucket exists in the project
-   bkts = storage(:Bucket, :list)
-   for item in bkts
-       display(item)
-       println()
-   end
-   ```
+```julia
+storage(:Bucket, :insert; data=Dict(:name => "a12345foo"))
 
-11. List all objects in the _a12345foo_ bucket. The list is currently empty.
+# Verify the new bucket exists in the project
+bkts = storage(:Bucket, :list)
+for item in bkts
+    display(item)
+    println()
+end
+```
 
-   ```julia
-   storage(:Object, :list, "a12345foo") 
-   ```
+List all objects in the _a12345foo_ bucket. The list is currently empty:
 
-12. Upload an object to the _a12345foo_ bucket.
+```julia
+storage(:Object, :list, "a12345foo")
+```
 
-   ```julia
-   # String containing the contents of test_image.jpg. The semi-colon avoids an error caused by printing the returned value.
-   file_contents = readstring(open("test_image.jpg", "r"));
+Upload an object to the _a12345foo_ bucket:
 
-   # Upload
-   storage(:Object, :insert, "a12345foo";     # Returns metadata about the object
-       name="image.jpg",           # Object name is "image.jpg"
-       data=file_contents,         # The data being stored on your project
-       content_type="image/jpeg"   # The contents are specified to be in JPEG format
-   )
+```julia
+# String containing the contents of test_image.jpg. The semi-colon avoids an error caused by printing the returned value.
+file_contents = readstring(open("test_image.jpg", "r"));
 
-   # Verify that the object is in the bucket
-   obs = storage(:Object, :list, "a12345foo")    # Ugly print
-   map(x -> x[:name], obs)                       # Pretty print
-   ```
+# Upload
+storage(:Object, :insert, "a12345foo";     # Returns metadata about the object
+    name="image.jpg",           # Object name is "image.jpg"
+    data=file_contents,         # The data being stored on your project
+    content_type="image/jpeg"   # The contents are specified to be in JPEG format
+)
 
-13. Get the _image.jpg_ object from the bucket.
+# Verify that the object is in the bucket
+obs = storage(:Object, :list, "a12345foo")    # Ugly print
+map(x -> x[:name], obs)                       # Pretty print
+```
 
-   ```julia
-   s = storage(:Object, :get, "a12345foo", "image.jpg");
-   s == file_contents    # Verify that the retrieved data is the same as that originally posted
-   ```
+Get the _image.jpg_ object from the bucket:
 
-14. Delete the _image.jpg_ object from the bucket.
+```julia
+s = storage(:Object, :get, "a12345foo", "image.jpg");
+s == file_contents    # Verify that the retrieved data is the same as that originally posted
+```
 
-   ```julia
-   storage(:Object, :delete, "a12345foo", "image.jpg")
+Delete the _image.jpg_ object from the bucket:
 
-   # Verify that the bucket is now empty
-   storage(:Object, :list, "a12345foo")
-   ```
+```julia
+storage(:Object, :delete, "a12345foo", "image.jpg")
 
-15. Delete the bucket.
+# Verify that the bucket is now empty
+storage(:Object, :list, "a12345foo")
+```
 
-   ```julia
-   storage(:Bucket, :delete, "a12345foo")
+Delete the bucket:
 
-   # Verify that the bucket has been deleted
-   bkts = storage(:Bucket, :list)
-   for item in bkts
-       display(item)
-       println()
-   end
-   ```
+```julia
+storage(:Bucket, :delete, "a12345foo")
+
+# Verify that the bucket has been deleted
+bkts = storage(:Bucket, :list)
+for item in bkts
+    display(item)
+    println()
+end
+```
 
 ## API Documentation
 ```@contents
