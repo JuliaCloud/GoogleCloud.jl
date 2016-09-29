@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Google Cloud JSON APIs for Julia">
+  
+  
+  <title>GoogleCloud.jl</title>
+  
+
+  <link rel="shortcut icon" href="./img/favicon.ico">
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="./css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="./css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="./css/highlight.css">
+  <link href="./assets/Documenter.css" rel="stylesheet">
+
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "None";
+    var mkdocs_page_input_path = "index.md";
+    var mkdocs_page_url = "/";
+  </script>
+  
+  <script src="./js/jquery-2.1.1.min.js"></script>
+  <script src="./js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="./js/highlight.pack.js"></script>
+  <script src="./js/theme.js"></script> 
+  <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  <script src="./assets/mathjaxhelper.js"></script>
+
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href="." class="icon icon-home"> GoogleCloud.jl</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="./search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        <ul class="current">
+          
+            <li>
+    <li class="toctree-l1 current">
+        <a class="current" href=".">Home</a>
+        
+            <ul>
+            
+                <li class="toctree-l3"><a href="#google-cloud-apis-for-julia">Google Cloud APIs for Julia</a></li>
+                
+                    <li><a class="toctree-l4" href="#quick-start">Quick Start</a></li>
+                
+                    <li><a class="toctree-l4" href="#api-documentation">API Documentation</a></li>
+                
+                    <li><a class="toctree-l4" href="#index">Index</a></li>
+                
+            
+            </ul>
+        
+    </li>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>API Documentation</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="api/credentials/">Credentials</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="api/session/">Sessions</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="api/api/">API Representation</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="api/root/">API Root URLs</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="api/error/">Error Types</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href=".">GoogleCloud.jl</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Home</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        
+          <a href="https://github.com/joshbode/GoogleCloud.jl" class="icon icon-github"> Edit on GitHub</a>
+        
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <p><a id='Google-Cloud-APIs-for-Julia-1'></a></p>
+<h1 id="google-cloud-apis-for-julia">Google Cloud APIs for Julia</h1>
+<p>This module wraps Google Cloud Platform (GCP) APIs with Julia.</p>
+<p>Currently only the Google Storage API has been added.</p>
+<p><a id='Quick-Start-1'></a></p>
+<h2 id="quick-start">Quick Start</h2>
+<p>This Quick Start walks through the steps required to store and retrieve data from Google Cloud Storage.</p>
+<p><a id='Google-Cloud-Prerequisites-1'></a></p>
+<h3 id="google-cloud-prerequisites">Google Cloud Prerequisites</h3>
+<ol>
+<li>If you don't already have a Google account, create one <a href="https://accounts.google.com/SignUp?hl=en">here</a>.</li>
+<li>Sign in to the GCP console <a href="https://console.cloud.google.com/">here</a>.</li>
+<li>
+<p>Create a new project by clicking on the <strong>Project</strong> drop-down menu at the top of the page. If you already have a GCP project, click on the drop-down menu at the top of the page and select <strong>Create project</strong>.</p>
+<p>A GCP project is a set of resources with common settings that is billed and  managed separately from any resource outside the set. Thus a resource  exists in exactly one project. Examples of resources include GCE instances,  storage volumes and data on those volumes. A project's settings include  ownership, users and their permissions, and associated GCP services. As a  user anything you do on GCP happens within a project, including data  storage, compute, messaging, logging, etc.</p>
+</li>
+<li>
+<p>Associated with your project are credentials that allow users to add, read and remove resources from the project. Get the credentials for your project as a JSON file from your <a href="https://console.cloud.google.com/apis/credentials">GCP Credentials</a> page:</p>
+<ul>
+<li>Type <em>credentials</em> into the search bar at the top of the console.</li>
+<li>Select <strong>Credentials API Manager</strong> from the search results.</li>
+<li>Click on the <strong>Create credentials</strong> drop-down menu and select <strong>Service account key</strong>.</li>
+<li>From the <strong>Service Account</strong> menu select <strong>New service account</strong>.</li>
+<li>From <strong>Role</strong> select <strong>Storage &gt; Storage Admin</strong>.</li>
+<li>Ensure the key type is JSON.</li>
+<li>Click <strong>Create</strong>.</li>
+</ul>
+<p>Credentials are then automatically downloaded in a JSON file. Save this file to your machine. In this tutorial we save the service account credentials to <code>~/credentials.json</code>.</p>
+</li>
+</ol>
+<p><a id='Interacting-with-the-Storage-API-from-Julia-1'></a></p>
+<h3 id="interacting-with-the-storage-api-from-julia">Interacting with the Storage API from Julia</h3>
+<p>Start Julia and install the <a href="https://github.com/joshbode/GoogleCloud.jl">GoogleCloud.jl</a> package:</p>
+<pre><code class="julia">Pkg.add(&quot;GoogleCloud&quot;)
+using GoogleCloud
+</code></pre>
+
+<p>Load the service account credentials obtained from Google:</p>
+<pre><code class="julia">creds = GoogleCredentials(expanduser(&quot;~/credentials.json&quot;))
+</code></pre>
+
+<p>Now, create a session with the credentials, requesting any required scopes:</p>
+<pre><code class="julia">session = GoogleSession(creds, [&quot;devstorage.full_control&quot;])
+</code></pre>
+
+<p>Set the default session of an API using <code>set_session</code>:</p>
+<pre><code class="julia">set_session(storage, session)    # storage is the API root, exported from GoogleCloud.jl
+</code></pre>
+
+<p>List all existing buckets in your project. The list contains a default bucket:</p>
+<pre><code class="julia">bkts = storage(:Bucket, :list)    # storage(:Bucket, :list; raw=true) returns addition information
+
+# Pretty print
+for item in bkts
+    display(item)
+    println()
+end
+</code></pre>
+
+<p>Create a bucket called <em>a12345foo</em>, for example. <strong>Note</strong>: The bucket name must be unique... across all buckets in GCP, so choose your own!</p>
+<pre><code class="julia">storage(:Bucket, :insert; data=Dict(:name =&gt; &quot;a12345foo&quot;))
+
+# Verify the new bucket exists in the project
+bkts = storage(:Bucket, :list)
+for item in bkts
+    display(item)
+    println()
+end
+</code></pre>
+
+<p>List all objects in the <em>a12345foo</em> bucket. The list is currently empty:</p>
+<pre><code class="julia">storage(:Object, :list, &quot;a12345foo&quot;)
+</code></pre>
+
+<p>Upload an object to the <em>a12345foo</em> bucket:</p>
+<pre><code class="julia"># String containing the contents of test_image.jpg. The semi-colon avoids an error caused by printing the returned value.
+file_contents = readstring(open(&quot;test_image.jpg&quot;, &quot;r&quot;));
+
+# Upload
+storage(:Object, :insert, &quot;a12345foo&quot;;     # Returns metadata about the object
+    name=&quot;image.jpg&quot;,           # Object name is &quot;image.jpg&quot;
+    data=file_contents,         # The data being stored on your project
+    content_type=&quot;image/jpeg&quot;   # The contents are specified to be in JPEG format
+)
+
+# Verify that the object is in the bucket
+obs = storage(:Object, :list, &quot;a12345foo&quot;)    # Ugly print
+map(x -&gt; x[:name], obs)                       # Pretty print
+</code></pre>
+
+<p>Get the <em>image.jpg</em> object from the bucket:</p>
+<pre><code class="julia">s = storage(:Object, :get, &quot;a12345foo&quot;, &quot;image.jpg&quot;);
+s == file_contents    # Verify that the retrieved data is the same as that originally posted
+</code></pre>
+
+<p>Delete the <em>image.jpg</em> object from the bucket:</p>
+<pre><code class="julia">storage(:Object, :delete, &quot;a12345foo&quot;, &quot;image.jpg&quot;)
+
+# Verify that the bucket is now empty
+storage(:Object, :list, &quot;a12345foo&quot;)
+</code></pre>
+
+<p>Delete the bucket:</p>
+<pre><code class="julia">storage(:Bucket, :delete, &quot;a12345foo&quot;)
+
+# Verify that the bucket has been deleted
+bkts = storage(:Bucket, :list)
+for item in bkts
+    display(item)
+    println()
+end
+</code></pre>
+
+<p><a id='API-Documentation-1'></a></p>
+<h2 id="api-documentation">API Documentation</h2>
+<ul>
+<li><a href="api/api/#Google-JSON-APIs-1">Google JSON APIs</a><ul>
+<li><a href="api/api/#Implemented-APIs-1">Implemented APIs</a></li>
+</ul>
+</li>
+<li><a href="api/credentials/#Google-Cloud-Platform-Credentials-1">Google Cloud Platform Credentials</a></li>
+<li><a href="api/error/#Error-Types-1">Error Types</a></li>
+<li><a href="api/root/#Google-API-URLs-1">Google API URLs</a></li>
+<li><a href="api/session/#Google-API-Authorisation-Manager-1">Google API Authorisation Manager</a></li>
+</ul>
+<p><a id='Index-1'></a></p>
+<h2 id="index">Index</h2>
+<ul>
+<li><a href="api/api/#GoogleCloud.api"><code>GoogleCloud.api</code></a></li>
+<li><a href="api/api/#GoogleCloud.api.storage_api"><code>GoogleCloud.api.storage_api</code></a></li>
+<li><a href="api/credentials/#GoogleCloud.credentials"><code>GoogleCloud.credentials</code></a></li>
+<li><a href="api/error/#GoogleCloud.error"><code>GoogleCloud.error</code></a></li>
+<li><a href="api/root/#GoogleCloud.root"><code>GoogleCloud.root</code></a></li>
+<li><a href="api/session/#GoogleCloud.session"><code>GoogleCloud.session</code></a></li>
+<li><a href="api/api/#GoogleCloud.api.storage_api.storage"><code>GoogleCloud.api.storage_api.storage</code></a></li>
+<li><a href="api/api/#GoogleCloud.api.APIMethod"><code>GoogleCloud.api.APIMethod</code></a></li>
+<li><a href="api/api/#GoogleCloud.api.APIResource"><code>GoogleCloud.api.APIResource</code></a></li>
+<li><a href="api/api/#GoogleCloud.api.APIRoot"><code>GoogleCloud.api.APIRoot</code></a></li>
+<li><a href="api/credentials/#GoogleCloud.credentials.GoogleCredentials"><code>GoogleCloud.credentials.GoogleCredentials</code></a></li>
+<li><a href="api/credentials/#GoogleCloud.credentials.GoogleCredentials-Tuple{String}"><code>GoogleCloud.credentials.GoogleCredentials</code></a></li>
+<li><a href="api/credentials/#GoogleCloud.credentials.GoogleCredentials-Tuple{Dict{Symbol,String}}"><code>GoogleCloud.credentials.GoogleCredentials</code></a></li>
+<li><a href="api/error/#GoogleCloud.error.APIError"><code>GoogleCloud.error.APIError</code></a></li>
+<li><a href="api/error/#GoogleCloud.error.CredentialError"><code>GoogleCloud.error.CredentialError</code></a></li>
+<li><a href="api/error/#GoogleCloud.error.Error"><code>GoogleCloud.error.Error</code></a></li>
+<li><a href="api/error/#GoogleCloud.error.SessionError"><code>GoogleCloud.error.SessionError</code></a></li>
+<li><a href="api/session/#GoogleCloud.session.GoogleSession"><code>GoogleCloud.session.GoogleSession</code></a></li>
+<li><a href="api/session/#GoogleCloud.session.JWTClaimSet"><code>GoogleCloud.session.JWTClaimSet</code></a></li>
+<li><a href="api/session/#GoogleCloud.session.JWTHeader"><code>GoogleCloud.session.JWTHeader</code></a></li>
+<li><a href="api/api/#GoogleCloud.api.execute-Tuple{GoogleCloud.session.GoogleSession,GoogleCloud.api.APIResource,GoogleCloud.api.APIMethod,Vararg{String,N}}"><code>GoogleCloud.api.execute</code></a></li>
+<li><a href="api/api/#GoogleCloud.api.path_replace-Tuple{String,Any}"><code>GoogleCloud.api.path_replace</code></a></li>
+<li><a href="api/api/#GoogleCloud.api.path_tokens-Tuple{String}"><code>GoogleCloud.api.path_tokens</code></a></li>
+<li><a href="api/api/#GoogleCloud.api.set_session-Tuple{GoogleCloud.api.APIRoot,Union{GoogleCloud.session.GoogleSession,Void}}"><code>GoogleCloud.api.set_session</code></a></li>
+<li><a href="api/root/#GoogleCloud.root.isurl-Tuple{String}"><code>GoogleCloud.root.isurl</code></a></li>
+<li><a href="api/session/#GoogleCloud.session.JWS"><code>GoogleCloud.session.JWS</code></a></li>
+<li><a href="api/session/#GoogleCloud.session.SHA256withRSA-Tuple{Any,Any}"><code>GoogleCloud.session.SHA256withRSA</code></a></li>
+<li><a href="api/session/#GoogleCloud.session.authorize-Tuple{GoogleCloud.session.GoogleSession}"><code>GoogleCloud.session.authorize</code></a></li>
+<li><a href="api/session/#GoogleCloud.session.unixseconds-Tuple{DateTime}"><code>GoogleCloud.session.unixseconds</code></a></li>
+</ul>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="api/credentials/" class="btn btn-neutral float-right" title="Credentials">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+	  
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+<div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a href="https://github.com/joshbode/GoogleCloud.jl" class="icon icon-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+      
+        <span style="margin-left: 15px"><a href="api/credentials/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+
+</body>
+</html>
+
+<!--
+MkDocs version : 0.15.3
+Build Date UTC : 2016-09-29 04:54:36.994771
+-->
