@@ -5,8 +5,7 @@ using GoogleCloud
 
 makedocs(
     modules=[GoogleCloud], doctest=true,
-    sitename="Google Cloud JSON APIs",
-    format=Documenter.Formats.HTML,
+    sitename="Google Cloud JSON APIs"
 )
 
 deploydocs(
