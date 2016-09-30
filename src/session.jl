@@ -23,6 +23,7 @@ Sign message using private key with RSASSA-PKCS1-V1_5-SIGN algorithm.
 function SHA256withRSA(message, key)
     # load up the key context
     ctx = MbedTLS.PKContext()
+    #MbedTLS.parse_key!(ctx, key)
     ccall((:mbedtls_pk_parse_key, MbedTLS.MBED_TLS), Cint,
         (Ptr{Void}, Ptr{Cuchar}, Csize_t, Ptr{Cuchar}, Csize_t),
         ctx.data, key, sizeof(key) + 1, C_NULL, 0
