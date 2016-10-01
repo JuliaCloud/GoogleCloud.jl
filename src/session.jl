@@ -24,7 +24,7 @@ function SHA256withRSA(message, key)
     # load up the key context
     ctx = MbedTLS.PKContext()
     #MbedTLS.parse_key!(ctx, key)
-    ccall((:mbedtls_pk_parse_key, MbedTLS.MBED_TLS), Cint,
+    ccall((:mbedtls_pk_parse_key, MbedTLS.MBED_CRYPTO), Cint,
         (Ptr{Void}, Ptr{Cuchar}, Csize_t, Ptr{Cuchar}, Csize_t),
         ctx.data, key, sizeof(key) + 1, C_NULL, 0
     )
