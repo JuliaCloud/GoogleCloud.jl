@@ -183,7 +183,7 @@ function (api::APIRoot)(resource_name::Symbol, method_name::Symbol, args...; kwa
         throw(APIError("Unknown method for resource $resource_name: $method_name"))
     end
     kwargs = Dict(kwargs)
-    session = pop!(kwargs, :session, get(api.default_session))
+    session = pop!(kwargs, :session, get_session(api))
     if session == nothing
         throw(SessionError("Cannot use API without a session."))
     end

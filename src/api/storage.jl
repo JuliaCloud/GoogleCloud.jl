@@ -86,7 +86,8 @@ type KeyStore{K, V} <: Associative{K, V}
     key_writer::Function
     val_reader::Function
     val_writer::Function
-    function KeyStore(bucket_name::String, session::GoogleSession=get_session(storage),
+    function KeyStore(bucket_name::String;
+        session::GoogleSession=get_session(storage),
         key_reader::Function=(x) -> parse(K, x), key_writer::Function=string,
         val_reader::Function=(x) -> parse(V, x), val_writer::Function=string
     )
