@@ -3,7 +3,7 @@ General framework for representing Google JSON APIs.
 """
 module api
 
-export APIRoot, APIResource, APIMethod, set_session
+export APIRoot, APIResource, APIMethod, set_session!, get_session
 
 import Base: show, print, getindex
 import Requests
@@ -151,14 +151,24 @@ end
 show(io::IO, x::APIRoot) = print(io, x)
 
 """
-    set_session(api, session)
+    set_session!(api, session)
 
 Set the default session for a specific API. Set session to `nothing` to
 forget session.
 """
-function set_session(api::APIRoot, session::Union{GoogleSession, Void})
+function set_session!(api::APIRoot, session::Union{GoogleSession, Void})
     api.default_session = session
     nothing
+end
+
+"""
+    get_session(api)
+
+Get the default session (if any) for a specific API. Session is `nothing` if
+not set.
+"""
+function get_session(api::APIRoot)
+    get(api.default_session, nothing)
 end
 
 function (api::APIRoot)(resource_name::Symbol)

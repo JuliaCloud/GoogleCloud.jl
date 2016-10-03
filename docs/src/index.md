@@ -63,10 +63,10 @@ Now, create a session with the credentials, requesting any required scopes:
 session = GoogleSession(creds, ["devstorage.full_control"])
 ```
 
-Set the default session of an API using `set_session`:
+Set the default session of an API using `set_session!`:
 
 ```julia
-set_session(storage, session)    # storage is the API root, exported from GoogleCloud.jl
+set_session!(storage, session)    # storage is the API root, exported from GoogleCloud.jl
 ```
 
 List all existing buckets in your project. The list contains a default bucket:

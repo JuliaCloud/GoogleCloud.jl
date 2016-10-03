@@ -3,8 +3,11 @@ Google Cloud Storage API
 """
 module storage_api
 
+export storage, KeyStore
+
 using ..api
 using ...root
+using ...session
 
 """
 Google Cloud Storage API root.
@@ -68,5 +71,96 @@ storage = APIRoot(
         stop=APIMethod(:POST, "stop", "Stop receiving object change notifications through this channel."),
     ),
 )
+
+
+# higher-level access to API
+import Base: print, show, display, getindex, setindex!, delete!, pop!, haskey, in, keys, values
+
+"""
+High-level container wrapping a Google Storage bucket
+"""
+type KeyStore{K, V} <: Associative{K, V}
+    bucket_name::String
+    session::GoogleSession
+    key_reader::Function
+    key_writer::Function
+    val_reader::Function
+    val_writer::Function
+    function KeyStore(bucket_name::String, session::GoogleSession=get_session(storage),
+        key_reader::Function=(x) -> parse(K, x), key_writer::Function=string,
+        val_reader::Function=(x) -> parse(V, x), val_writer::Function=string
+    )
+        bucket = storage(:Bucket, :get, bucket_name; session=session)
+        if haskey(bucket, :error)
+            metadata = storage(:Bucket, :insert; session=session, data=Dict(:name => bucket_name))
+            if haskey(metadata, :error)
+                error("Unable to create bucket: $(bucket[:error][:message])")
+            end
+        end
+        new(bucket_name, session, key_reader, key_writer, val_reader, val_writer)
+    end
+end
+print(io::IO, store::KeyStore) = print(io, "KeyStore($(store.bucket_name))")
+show(io::IO, store::KeyStore) = print(io, store)
+display(store::KeyStore) = print(store)
+
+function getindex{K, V}(store::KeyStore{K, V}, key::K)
+    name = store.key_writer(key)
+    val = storage(:Object, :get, store.bucket_name, name; session=store.session)
+    if isa(val, Dict{Symbol, Any}) && haskey(val, :error)
+        throw(KeyError("$(store.bucket_name):$name"))
+    end
+    data = store.val_reader(val)
+    if !isa(data, V)
+        throw(TypeError(:getindex, "$(store.bucket_name):$name", V, data))
+    else
+	data
+    end
+end
+
+function setindex!{K, V}(store::KeyStore{K, V}, val::V, key::K)
+    name = store.key_writer(key)
+    data = store.val_writer(val)
+    storage(:Object, :insert, store.bucket_name; session=store.session, name=name, data=data, content_type="text/plain")
+    val
+end
+
+function delete!{K, V}(store::KeyStore{K, V}, key::K)
+    name = store.key_writer(key)
+    storage(:Object, :delete, store.bucket_name, name; session=store.session)
+end
+
+function pop!{K, V}(store::KeyStore{K, V}, key::K)
+    val = store[key]
+    delete!(store, key)
+    val
+end
+
+function haskey{K, V}(store::KeyStore{K, V}, key::K)
+    name = store.key_writer(key)
+    metadata = storage(:Object, :get, store.bucket_name, name; session=store.session, alt="")
+    !haskey(metadata, :error)
+end
+
+function in{K, V}(store::KeyStore{K, V}, key::K)
+    haskey(store, key)
+end
+
+function keys{K, V}(store::KeyStore{K, V})
+    result = K[]
+    for metadata in storage(:Object, :list, store.bucket_name; session=store.session)
+        name = metadata[:name]
+        key = store.key_reader(name)
+        if !isa(key, K)
+            throw(TypeError(:keys, "$(store.bucket_name):$name", K, key))
+        end
+        push!(result, key)
+    end
+    result
+end
+
+function values{K, V}(store::KeyStore{K, V})
+    V[store[key] for key in keys(store)]
+end
 
 end
