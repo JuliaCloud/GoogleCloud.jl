@@ -6,7 +6,7 @@ module GoogleCloud
 export
     GoogleCredentials, GoogleSession, authorize,
     set_session!, get_session,
-    storage, KeyStore
+    storage, KeyStore, Mode
 
 # submodules
 include("root.jl")
@@ -21,6 +21,6 @@ using .session
 using .api
 
 # API bindings
-import .api.storage_api: storage, KeyStore
+import .api.storage_api: storage, KeyStore, Mode
 
 end

@@ -3,7 +3,9 @@ Google Cloud Storage API
 """
 module storage_api
 
-export storage, KeyStore
+export storage, KeyStore, Mode
+
+using Base.Dates
 
 using ..api
 using ...root
@@ -74,7 +76,13 @@ storage = APIRoot(
 
 
 # higher-level access to API
-import Base: print, show, display, getindex, setindex!, delete!, pop!, haskey, in, keys, values
+import Base:
+    print, show, display, getindex, setindex!, delete!, pop!, get, haskey, in,
+    keys, values, start, next, done, iteratorsize, SizeUnknown
+
+module Mode
+    LOCAL, REMOTE = 1, 2
+end
 
 """
 High-level container wrapping a Google Storage bucket
@@ -86,19 +94,31 @@ type KeyStore{K, V} <: Associative{K, V}
     key_writer::Function
     val_reader::Function
     val_writer::Function
+    mode::Int64
+    grace::Second
+    cache::Dict{K, Tuple{DateTime, V}}
     function KeyStore(bucket_name::String;
-        session::GoogleSession=get_session(storage),
+        session::GoogleSession=get_session(storage), mode::Int64=Mode.REMOTE,
+        grace::Second=Second(5),
         key_reader::Function=(x) -> parse(K, x), key_writer::Function=string,
         val_reader::Function=(x) -> parse(V, x), val_writer::Function=string
     )
-        bucket = storage(:Bucket, :get, bucket_name; session=session)
-        if haskey(bucket, :error)
-            metadata = storage(:Bucket, :insert; session=session, data=Dict(:name => bucket_name))
-            if haskey(metadata, :error)
-                error("Unable to create bucket: $(bucket[:error][:message])")
+        if mode & (Mode.LOCAL | Mode.REMOTE) == 0
+            error("Storage mode must be local and/or remote.")
+        end
+        if mode & Mode.REMOTE != 0
+            bucket = storage(:Bucket, :get, bucket_name; session=session)
+            if haskey(bucket, :error)
+                metadata = storage(:Bucket, :insert; session=session, data=Dict(:name => bucket_name))
+                if haskey(metadata, :error)
+                    error("Unable to create bucket: $(bucket[:error][:message])")
+                end
             end
         end
-        new(bucket_name, session, key_reader, key_writer, val_reader, val_writer)
+        new(bucket_name, session,
+            key_reader, key_writer, val_reader, val_writer,
+            mode, grace, Dict{K, Tuple{DateTime, V}}()
+        )
     end
 end
 print(io::IO, store::KeyStore) = print(io, "KeyStore($(store.bucket_name))")
@@ -107,40 +127,90 @@ display(store::KeyStore) = print(store)
 
 function getindex{K, V}(store::KeyStore{K, V}, key::K)
     name = store.key_writer(key)
-    val = storage(:Object, :get, store.bucket_name, name; session=store.session)
-    if isa(val, Dict{Symbol, Any}) && haskey(val, :error)
-        throw(KeyError("$(store.bucket_name):$name"))
+    if store.mode & Mode.LOCAL != 0
+        if haskey(store.cache, key)
+            timestamp, val = store.cache[key]
+            if store.mode & Mode.REMOTE == 0
+                return val
+            end
+            metadata = storage(:Object, :get, store.bucket_name, name; session=store.session, alt="")
+            if !haskey(metadata, :error)
+                if timestamp + store.grace > DateTime(metadata[:updated], "yyyy-mm-ddTHH:MM:SS.sssZ")
+                    return val
+                end
+            end
+        end
     end
-    data = store.val_reader(val)
-    if !isa(data, V)
-        throw(TypeError(:getindex, "$(store.bucket_name):$name", V, data))
-    else
-	data
+    if store.mode & Mode.REMOTE != 0
+        data = storage(:Object, :get, store.bucket_name, name; session=store.session)
+        if isa(data, Dict{Symbol, Any}) && haskey(data, :error)
+            throw(KeyError(key))
+        end
+        val = store.val_reader(data)
+        if !isa(val, V)
+            throw(TypeError(:getindex, "$(store.bucket_name):$name", V, val))
+        end
+        if store.mode & Mode.LOCAL != 0
+            store.cache[key] = (now(), val)
+        end
+        return val
     end
+    throw(KeyError(key))
 end
 
 function setindex!{K, V}(store::KeyStore{K, V}, val::V, key::K)
-    name = store.key_writer(key)
-    data = store.val_writer(val)
-    storage(:Object, :insert, store.bucket_name; session=store.session, name=name, data=data, content_type="text/plain")
+    if store.mode & Mode.LOCAL != 0
+        store.cache[key] = (now(), val)
+    end
+    if store.mode & Mode.REMOTE != 0
+        name = store.key_writer(key)
+        data = store.val_writer(val)
+        storage(:Object, :insert, store.bucket_name; session=store.session,
+            name=name, data=data, content_type="text/plain"
+        )
+    end
     val
 end
 
 function delete!{K, V}(store::KeyStore{K, V}, key::K)
-    name = store.key_writer(key)
-    storage(:Object, :delete, store.bucket_name, name; session=store.session)
+    if store.mode & Mode.LOCAL != 0
+        delete!(store.cache, key)
+    end
+    if store.mode & Mode.REMOTE != 0
+        name = store.key_writer(key)
+        metadata = storage(:Object, :delete, store.bucket_name, name; session=store.session)
+    end
+    nothing
 end
 
-function pop!{K, V}(store::KeyStore{K, V}, key::K)
-    val = store[key]
+function pop!{K, V}(store::KeyStore{K, V}, key::K, default=nothing)
+    val = default == nothing ? store[key] : get(store, key, default)
     delete!(store, key)
     val
 end
 
+function get{K, V}(store::KeyStore{K, V}, key::K, default)
+    try
+        return store[key]
+    catch
+        return default
+    end
+end
+
 function haskey{K, V}(store::KeyStore{K, V}, key::K)
-    name = store.key_writer(key)
-    metadata = storage(:Object, :get, store.bucket_name, name; session=store.session, alt="")
-    !haskey(metadata, :error)
+    if store.mode & Mode.LOCAL != 0
+        if haskey(store.cache, key)
+            return true
+        end
+    end
+    if store.mode & Mode.REMOTE != 0
+        name = store.key_writer(key)
+        metadata = storage(:Object, :get, store.bucket_name, name; session=store.session, alt="")
+        if !haskey(metadata, :error)
+            return true
+        end
+    end
+    false
 end
 
 function in{K, V}(store::KeyStore{K, V}, key::K)
@@ -149,19 +219,53 @@ end
 
 function keys{K, V}(store::KeyStore{K, V})
     result = K[]
-    for metadata in storage(:Object, :list, store.bucket_name; session=store.session)
-        name = metadata[:name]
-        key = store.key_reader(name)
-        if !isa(key, K)
-            throw(TypeError(:keys, "$(store.bucket_name):$name", K, key))
-        end
-        push!(result, key)
+    if store.mode & Mode.LOCAL != 0
+        append!(result, keys(store.cache))
     end
-    result
+    if store.mode & Mode.REMOTE != 0
+        for metadata in storage(:Object, :list, store.bucket_name; session=store.session)
+            name = metadata[:name]
+            key = store.key_reader(name)
+            if !isa(key, K)
+                throw(TypeError(:keys, "$(store.bucket_name):$name", K, key))
+            end
+            push!(result, key)
+        end
+    end
+    unique(result)
 end
 
+# WARNING: potential for race condition. don't zip with keys.
 function values{K, V}(store::KeyStore{K, V})
-    V[store[key] for key in keys(store)]
+    V[x for x in (get(store, key, nothing) for key in keys(store)) if x != nothing]
 end
+
+function fast_forward{K, V}(store::KeyStore{K, V}, key_list)
+    while !isempty(key_list)
+        key = pop!(key_list)
+        val = get(store, key, nothing)
+        if val != nothing
+            return Pair{K, V}(key, val)
+        end
+    end
+    nothing
+end
+
+function start{K, V}(store::KeyStore{K, V})
+    key_list = keys(store)
+    return (fast_forward(store, key_list), key_list)
+end
+
+function next{K, V}(store::KeyStore{K, V}, state)
+    pair, key_list = state
+    return pair, (fast_forward(store, key_list), key_list)
+end
+
+function done{K, V}(store::KeyStore{K, V}, state)
+    pair, key_list = state
+    pair == nothing
+end
+
+iteratorsize{K, V}(::Type{KeyStore{K, V}}) = SizeUnknown()
 
 end
