@@ -3,7 +3,7 @@ General framework for representing Google JSON APIs.
 """
 module api
 
-export APIRoot, APIResource, APIMethod, set_session!, get_session
+export APIRoot, APIResource, APIMethod, set_session!, get_session, iserror
 
 import Base: show, print, getindex
 import Requests
@@ -44,6 +44,9 @@ path_replace("/{foo}/{bar}/{baz}", ["this", "is", "it"])
 ```
 """
 path_replace(path::String, values) = reduce((x, y) -> replace(x, y[1], y[2], 1), path, zip(path_tokens(path), values))
+
+"""Check if response is/contains an error"""
+iserror(x::Any) = isa(x, Dict{Symbol, Any}) && haskey(x, :error)
 
 """
     APIMethod(verb, path, description)
