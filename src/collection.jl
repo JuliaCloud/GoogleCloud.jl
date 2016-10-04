@@ -300,7 +300,8 @@ function clearpending{K, V}(store::KeyStore{K, V})
 end
 
 function clearcache{K, V}(store::KeyStore{K, V})
-    store.cache, store.cache_age = typeof(store.pending)(), typeof(store.cache_age)()
+    clearpending(store)
+    store.cache, store.cache_age = typeof(store.cache)(), typeof(store.cache_age)()
     store
 end
 
