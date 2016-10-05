@@ -194,7 +194,7 @@ function setindex!{K, V}(store::KeyStore{K, V}, val::V, key::K, use_remote::Bool
         name = store.key_writer(key)
         data = store.val_writer(val)
         response = storage(:Object, :insert, store.bucket_name; session=store.session,
-            name=name, data=data, content_type="text/plain"
+            name=name, data=data, content_type="application/octet-stream"
         )
         if iserror(response)
             error("Unable to set key '$key': $(response[:error][:message])")
@@ -244,7 +244,7 @@ function fast_forward{K, V}(store::KeyStore{K, V}, key_list)
 end
 
 function start{K, V}(store::KeyStore{K, V})
-    key_list = keys(store)
+    key_list = collect(keys(store))
     return (fast_forward(store, key_list), key_list)
 end
 
