@@ -279,8 +279,11 @@ function fetch{K, V}(store::KeyStore{K, V}, key_list::K...)
     if !isempty(store.pending)
         error("Pending actions must be committed or cleared before fetching.")
     end
-    for key in isempty(key_list) ? keys(store; use_remote=true, use_local=false) : key_list
-        val = get(store, key, nothing; use_remote=true, use_local=false)
+    if isempty(key_list)
+        key_list = keys(store; use_remote=true, use_cache=false)
+    end
+    for key in key_list
+        val = get(store, key, nothing; use_remote=true, use_cache=false)
         if val != nothing
             store.cache[key], store.cache_age[key] = val, now(UTC)
         end
