@@ -193,9 +193,12 @@ function setindex!{K, V}(store::KeyStore{K, V}, val::V, key::K, use_remote::Bool
     if use_remote
         name = store.key_writer(key)
         data = store.val_writer(val)
-        storage(:Object, :insert, store.bucket_name; session=store.session,
+        response = storage(:Object, :insert, store.bucket_name; session=store.session,
             name=name, data=data, content_type="text/plain"
         )
+        if iserror(response)
+            error("Unable to set key '$key': $(response[:error][:message])")
+        end
     else
         store.pending[key] = SET
     end
