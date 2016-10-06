@@ -1,6 +1,6 @@
 module collection
 
-export KeyStore, commit, fetch, sync, clearcache, clearpending
+export KeyStore, commit!, fetch!, sync!, clearcache!, clearpending!
 
 using Base.Dates
 
@@ -261,7 +261,7 @@ end
 iteratorsize{K, V}(::Type{KeyStore{K, V}}) = SizeUnknown()
 
 # committing
-function commit{K, V}(store::KeyStore{K, V})
+function commit!{K, V}(store::KeyStore{K, V})
     use_remote, use_cache = true, false
     for key in collect(keys(store.pending))
         action = pop!(store.pending, key)
@@ -275,7 +275,7 @@ function commit{K, V}(store::KeyStore{K, V})
     store
 end
 
-function fetch{K, V}(store::KeyStore{K, V}, key_list::K...)
+function fetch!{K, V}(store::KeyStore{K, V}, key_list::K...)
     if !isempty(store.pending)
         error("Pending actions must be committed or cleared before fetching.")
     end
@@ -291,19 +291,19 @@ function fetch{K, V}(store::KeyStore{K, V}, key_list::K...)
     store
 end
 
-function sync{K, V}(store::KeyStore{K, V})
-    commit(store)
-    fetch(store)
+function sync!{K, V}(store::KeyStore{K, V})
+    commit!(store)
+    fetch!(store)
     store
 end
 
-function clearpending{K, V}(store::KeyStore{K, V})
+function clearpending!{K, V}(store::KeyStore{K, V})
     store.pending = typeof(store.pending)()
     store
 end
 
-function clearcache{K, V}(store::KeyStore{K, V})
-    clearpending(store)
+function clearcache!{K, V}(store::KeyStore{K, V})
+    clearpending!(store)
     store.cache, store.cache_age = typeof(store.cache)(), typeof(store.cache_age)()
     store
 end
