@@ -67,7 +67,9 @@
                 
                     <li><a class="toctree-l4" href="#quick-start">Quick Start</a></li>
                 
-                    <li><a class="toctree-l4" href="#api-documentation">API Documentation</a></li>
+                    <li><a class="toctree-l4" href="#high-level-api">High-Level API</a></li>
+                
+                    <li><a class="toctree-l4" href="#low-level-api">Low-Level API</a></li>
                 
                     <li><a class="toctree-l4" href="#index">Index</a></li>
                 
@@ -75,6 +77,28 @@
             </ul>
         
     </li>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Custom APIs</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="custom_api/">Collections</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="custom_api/keystore/">Key Store</a>
+        
+    </li>
+
+        
+    </ul>
 <li>
           
             <li>
@@ -201,8 +225,8 @@ using GoogleCloud
 <pre><code class="julia">session = GoogleSession(creds, [&quot;devstorage.full_control&quot;])
 </code></pre>
 
-<p>Set the default session of an API using <code>set_session</code>:</p>
-<pre><code class="julia">set_session(storage, session)    # storage is the API root, exported from GoogleCloud.jl
+<p>Set the default session of an API using <code>set_session!</code>:</p>
+<pre><code class="julia">set_session!(storage, session)    # storage is the API root, exported from GoogleCloud.jl
 </code></pre>
 
 <p>List all existing buckets in your project. The list contains a default bucket:</p>
@@ -269,34 +293,43 @@ for item in bkts
 end
 </code></pre>
 
-<p><a id='API-Documentation-1'></a></p>
-<h2 id="api-documentation">API Documentation</h2>
+<p><a id='High-Level-API-1'></a></p>
+<h2 id="high-level-api">High-Level API</h2>
 <ul>
+<li><a href="custom_api/#Custom-APIs-1">Custom APIs</a><ul>
+<li><a href="custom_api/#Collections-1">Collections</a></li>
+</ul>
+</li>
+</ul>
+<p><a id='Low-Level-API-1'></a></p>
+<h2 id="low-level-api">Low-Level API</h2>
+<ul>
+<li><a href="api/credentials/#Google-Cloud-Platform-Credentials-1">Google Cloud Platform Credentials</a></li>
+<li><a href="api/session/#Google-API-Authorisation-Manager-1">Google API Authorisation Manager</a></li>
 <li><a href="api/api/#Google-JSON-APIs-1">Google JSON APIs</a><ul>
 <li><a href="api/api/#Implemented-APIs-1">Implemented APIs</a></li>
 </ul>
 </li>
-<li><a href="api/credentials/#Google-Cloud-Platform-Credentials-1">Google Cloud Platform Credentials</a></li>
-<li><a href="api/error/#Error-Types-1">Error Types</a></li>
 <li><a href="api/root/#Google-API-URLs-1">Google API URLs</a></li>
-<li><a href="api/session/#Google-API-Authorisation-Manager-1">Google API Authorisation Manager</a></li>
+<li><a href="api/error/#Error-Types-1">Error Types</a></li>
 </ul>
 <p><a id='Index-1'></a></p>
 <h2 id="index">Index</h2>
 <ul>
 <li><a href="api/api/#GoogleCloud.api"><code>GoogleCloud.api</code></a></li>
-<li><a href="api/api/#GoogleCloud.api.storage_api"><code>GoogleCloud.api.storage_api</code></a></li>
+<li><a href="api/api/#GoogleCloud.api._storage"><code>GoogleCloud.api._storage</code></a></li>
 <li><a href="api/credentials/#GoogleCloud.credentials"><code>GoogleCloud.credentials</code></a></li>
 <li><a href="api/error/#GoogleCloud.error"><code>GoogleCloud.error</code></a></li>
 <li><a href="api/root/#GoogleCloud.root"><code>GoogleCloud.root</code></a></li>
 <li><a href="api/session/#GoogleCloud.session"><code>GoogleCloud.session</code></a></li>
-<li><a href="api/api/#GoogleCloud.api.storage_api.storage"><code>GoogleCloud.api.storage_api.storage</code></a></li>
+<li><a href="api/api/#GoogleCloud.api._storage.storage"><code>GoogleCloud.api._storage.storage</code></a></li>
 <li><a href="api/api/#GoogleCloud.api.APIMethod"><code>GoogleCloud.api.APIMethod</code></a></li>
 <li><a href="api/api/#GoogleCloud.api.APIResource"><code>GoogleCloud.api.APIResource</code></a></li>
 <li><a href="api/api/#GoogleCloud.api.APIRoot"><code>GoogleCloud.api.APIRoot</code></a></li>
+<li><a href="custom_api/#GoogleCloud.collection.KeyStore"><code>GoogleCloud.collection.KeyStore</code></a></li>
 <li><a href="api/credentials/#GoogleCloud.credentials.GoogleCredentials-Tuple{Dict{Symbol,String}}"><code>GoogleCloud.credentials.GoogleCredentials</code></a></li>
-<li><a href="api/credentials/#GoogleCloud.credentials.GoogleCredentials"><code>GoogleCloud.credentials.GoogleCredentials</code></a></li>
 <li><a href="api/credentials/#GoogleCloud.credentials.GoogleCredentials-Tuple{String}"><code>GoogleCloud.credentials.GoogleCredentials</code></a></li>
+<li><a href="api/credentials/#GoogleCloud.credentials.GoogleCredentials"><code>GoogleCloud.credentials.GoogleCredentials</code></a></li>
 <li><a href="api/error/#GoogleCloud.error.APIError"><code>GoogleCloud.error.APIError</code></a></li>
 <li><a href="api/error/#GoogleCloud.error.CredentialError"><code>GoogleCloud.error.CredentialError</code></a></li>
 <li><a href="api/error/#GoogleCloud.error.Error"><code>GoogleCloud.error.Error</code></a></li>
@@ -305,9 +338,11 @@ end
 <li><a href="api/session/#GoogleCloud.session.JWTClaimSet"><code>GoogleCloud.session.JWTClaimSet</code></a></li>
 <li><a href="api/session/#GoogleCloud.session.JWTHeader"><code>GoogleCloud.session.JWTHeader</code></a></li>
 <li><a href="api/api/#GoogleCloud.api.execute-Tuple{GoogleCloud.session.GoogleSession,GoogleCloud.api.APIResource,GoogleCloud.api.APIMethod,Vararg{String,N}}"><code>GoogleCloud.api.execute</code></a></li>
+<li><a href="api/api/#GoogleCloud.api.get_session-Tuple{GoogleCloud.api.APIRoot}"><code>GoogleCloud.api.get_session</code></a></li>
+<li><a href="api/api/#GoogleCloud.api.iserror-Tuple{Any}"><code>GoogleCloud.api.iserror</code></a></li>
 <li><a href="api/api/#GoogleCloud.api.path_replace-Tuple{String,Any}"><code>GoogleCloud.api.path_replace</code></a></li>
 <li><a href="api/api/#GoogleCloud.api.path_tokens-Tuple{String}"><code>GoogleCloud.api.path_tokens</code></a></li>
-<li><a href="api/api/#GoogleCloud.api.set_session-Tuple{GoogleCloud.api.APIRoot,Union{GoogleCloud.session.GoogleSession,Void}}"><code>GoogleCloud.api.set_session</code></a></li>
+<li><a href="api/api/#GoogleCloud.api.set_session!-Tuple{GoogleCloud.api.APIRoot,Union{GoogleCloud.session.GoogleSession,Void}}"><code>GoogleCloud.api.set_session!</code></a></li>
 <li><a href="api/root/#GoogleCloud.root.isurl-Tuple{String}"><code>GoogleCloud.root.isurl</code></a></li>
 <li><a href="api/session/#GoogleCloud.session.JWS"><code>GoogleCloud.session.JWS</code></a></li>
 <li><a href="api/session/#GoogleCloud.session.SHA256withRSA-Tuple{Any,Any}"><code>GoogleCloud.session.SHA256withRSA</code></a></li>
@@ -321,7 +356,7 @@ end
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="api/credentials/" class="btn btn-neutral float-right" title="Credentials">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="custom_api/" class="btn btn-neutral float-right" title="Collections">Next <span class="icon icon-circle-arrow-right"></span></a>
       
       
     </div>
@@ -351,7 +386,7 @@ end
       
       
       
-        <span style="margin-left: 15px"><a href="api/credentials/" style="color: #fcfcfc">Next &raquo;</a></span>
+        <span style="margin-left: 15px"><a href="custom_api/" style="color: #fcfcfc">Next &raquo;</a></span>
       
     </span>
 </div>
@@ -361,5 +396,5 @@ end
 
 <!--
 MkDocs version : 0.15.3
-Build Date UTC : 2016-10-01 06:02:24.085099
+Build Date UTC : 2016-10-06 03:51:49.502051
 -->
