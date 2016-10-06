@@ -21,6 +21,9 @@ docs_dir: 'build'
 
 pages:
   - Home: index.md
+  - Custom APIs:
+    - Collections: custom_api/index.md
+    - Key Store: custom_api/keystore.md
   - API Documentation:
     - Credentials: api/credentials.md
     - Sessions: api/session.md

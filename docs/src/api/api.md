@@ -7,5 +7,5 @@ Modules = [GoogleCloud.api]
 ## Implemented APIs
 
 ```@autodocs
-Modules = [GoogleCloud.api.storage_api]
+Modules = [GoogleCloud.api._storage]
 ```
