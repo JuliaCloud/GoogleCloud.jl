@@ -148,9 +148,15 @@ for item in bkts
 end
 ```
 
-## API Documentation
+## High-Level API
 ```@contents
-Pages = [joinpath("api", x) for x in readdir("api") if splitext(x)[2] == ".md"]
+Pages = ["custom_api/index.md"]
+Depth = 2
+```
+
+## Low-Level API
+```@contents
+Pages = ["api/credentials.md", "api/session.md", "api/api.md", "api/root.md", "api/error.md"]
 Depth = 2
 ```
 
