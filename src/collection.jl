@@ -1,6 +1,6 @@
 module collection
 
-export KeyStore, commit!, fetch!, sync!, clearcache!, clearpending!
+export KeyStore, commit!, fetch!, sync!, clearcache!, clearpending!, reset!
 
 using Base.Dates
 
@@ -45,6 +45,13 @@ type KeyStore{K, V} <: Associative{K, V}
             error("Must use remote and/or cache but not neither")
         end
 
+        store = new(bucket_name, session,
+            key_reader, key_writer,
+            val_reader, val_writer,
+            use_remote, use_cache, grace,
+            Dict{K, V}(), Dict{K, Action}(), Dict{K, DateTime}()
+        )
+
         # establish availability of bucket
         response = storage(:Bucket, :get, bucket_name; session=session)
         if iserror(response)
@@ -60,20 +67,9 @@ type KeyStore{K, V} <: Associative{K, V}
                 error("Error checking bucket: $(response[:error][:message])")
             end
         elseif reset
-            for object in storage(:Object, :list, bucket_name; session=session)
-                response = storage(:Object, :delete, bucket_name, object[:name]; session=session)
-                if iserror(response)
-                    error("Unable to delete object: $(response[:error][:message])")
-                end
-            end
+            reset!(store)
         end
-
-        new(bucket_name, session,
-            key_reader, key_writer,
-            val_reader, val_writer,
-            use_remote, use_cache, grace,
-            Dict{K, V}(), Dict{K, Action}(), Dict{K, DateTime}()
-        )
+        store
     end
 end
 
@@ -305,6 +301,26 @@ end
 function clearcache!{K, V}(store::KeyStore{K, V})
     clearpending!(store)
     store.cache, store.cache_age = typeof(store.cache)(), typeof(store.cache_age)()
+    store
+end
+
+function reset!{K, V}(store::KeyStore{K, V})
+    for object in storage(:Object, :list, store.bucket_name; session=store.session)
+        response = storage(:Object, :delete, store.bucket_name, object[:name]; session=store.session)
+        if iserror(response)
+            error("Unable to delete object: $(response[:error][:message])")
+        end
+    end
+end
+
+function delete!{K, V}(store::KeyStore{K, V})
+    response = storage(:Bucket, :delete, store.bucket_name; session=store.session)
+    if iserror(response)
+        error("Unable to delete bucket: $(response[:error][:message])")
+    end
+    store.bucket_name = "-"
+    store.use_remote = false
+    store.use_cache = true
     store
 end
 

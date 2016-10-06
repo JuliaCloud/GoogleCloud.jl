@@ -25,6 +25,6 @@ using .collection
 import .api._storage: storage
 export
     storage, KeyStore,
-    commit!, fetch!, sync!, clearcache!, clearpending!
+    commit!, fetch!, sync!, clearcache!, clearpending!, reset!
 
 end
