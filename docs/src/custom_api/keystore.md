@@ -54,10 +54,10 @@ kv_sync[2] = 22
 kv_sync.cache
 
 # Verify remote store
-clearcache(kv_sync)    # Clear local store
-kv_sync.cache          # Verify local store is empty again
-collect(kv_sync)       # Pull data from remote store and populate local store
-kv_sync.cache          # Local store now contains our data
+clearcache!(kv_sync)    # Clear local store
+kv_sync.cache           # Verify local store is empty again
+collect(kv_sync)        # Pull data from remote store and populate local store
+kv_sync.cache           # Local store now contains our data
 ```
 
 If you are writing frequently then the latency of persisting each write to the remote store may be unacceptably slow. One solution is to do all your writes locally, then persist them remotely with one `commit`, as follows:
@@ -86,16 +86,14 @@ kv_sync[3]            # Now returns 33 from the remote store
 Finally we clean up.
 
 ```julia
-delete!(kv_sync, 1)
-delete!(kv_sync, 2)
-delete!(kv_sync, 3)
-collect(kv_sync)      # Verify that the store is empty
+delete!(kv_sync)      # Error: Can't delete a non-empty remote store
+reset!(kv_sync)       # Remove all data from remote store. Alternatively, delete!(kv_sync, 1), delete!(kv_sync, 2), etc.
+delete!(kv_sync)      # Detaches local store from remote store and deletes remote store
 ```
 
 Additional methods include:
 
 ```julia
-clearcache!(kvstore)      # Empty the local store
 clearpending!(kvstore)    # Empty the list of local changes that haven't been committed to the remote store
 sync!(kvstore)            # Commit local changes to remote store, then fetch data from remote store
 ```
