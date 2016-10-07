@@ -8,6 +8,7 @@ export APIRoot, APIResource, APIMethod, set_session!, get_session, iserror
 import Base: show, print, getindex
 import Requests
 import URIParser
+import Libz
 import JSON
 
 using ..session
@@ -234,22 +235,29 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         if !isempty(content_type)
             headers["Content-Type"] = content_type
         end
-        if content_type == "application/json"
+        if content_type == "application/json" && !isa(data, Union{String, Vector{UInt8}})
             data = JSON.json(data)
         end
     end
+    if get(params, :contentEncoding, "") == "gzip"
+        data = Vector{UInt8}(data) |> Libz.ZlibDeflateInputStream |> read
+    end
     res = Requests.do_request(
         URIParser.URI(path_replace(method.path, path_args)), string(method.verb);
-        query=params, data=data, headers=headers
+        query=params, data=data, headers=headers,
+        compressed=true
     )
 
     if debug
-        info("\n" * join(("  $name: $value" for (name, value) in sort(collect(res.headers))), "\n"))
-        info(String(res.data))
+        info("Request URL: $(get(res.request).uri)")
+        info("Request Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(get(res.request).headers))), "\n"))
+        info("Request Data:\n  " * base64encode(get(res.request).data))
+        info("Response Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(res.headers))), "\n"))
+        info("Response Data:\n  " * base64encode(res.data))
     end
 
     # if response is JSON, parse and return. otherwise, just dump data
-    if res.headers["Content-Length"] == "0"
+    if get(res.headers, "Content-Length", "") == "0"
         nothing
     elseif contains(res.headers["Content-Type"], "application/json")
         result = Requests.json(res; dicttype=Dict{Symbol, Any})

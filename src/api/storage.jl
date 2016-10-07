@@ -42,7 +42,7 @@ storage = APIRoot(
             Dict(:alt => "media")
         ),
         insert=APIMethod(:POST, "$API_ROOT/upload/storage/v1/b/{bucket}/o", "Stores a new object and metadata.",
-            Dict(:uploadType => "media")
+            Dict(:uploadType => "media", :contentEncoding => "gzip")
         ),
         list=APIMethod(:GET, "", "Retrieves a list of objects matching the criteria."; transform=(x, t) -> map(t, get(x, :items, []))),
         patch=APIMethod(:PATCH, "{object}", "Updates a data blob's associated metadata. This method supports patch semantics."),

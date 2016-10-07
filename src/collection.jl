@@ -53,11 +53,11 @@ type KeyStore{K, V} <: Associative{K, V}
         )
 
         # establish availability of bucket
-        response = storage(:Bucket, :get, bucket_name; session=session)
+        response = storage(:Bucket, :get, bucket_name; session=session, fields="")
         if iserror(response)
             code = response[:error][:code]
             if code == 404  # not found (available)
-                response = storage(:Bucket, :insert; session=session, data=Dict(:name => bucket_name))
+                response = storage(:Bucket, :insert; session=session, data=Dict(:name => bucket_name), fields="")
                 if iserror(response)
                     error("Unable to create bucket: $(response[:error][:message])")
                 end
@@ -91,7 +91,7 @@ function getindex{K, V}(store::KeyStore{K, V}, key::K, use_remote::Bool=store.us
     if use_cache
         if haskey(store.cache, key)
             val, timestamp = store.cache[key], store.cache_age[key]
-            response = storage(:Object, :get, store.bucket_name, name; session=store.session, alt="")
+            response = storage(:Object, :get, store.bucket_name, name; session=store.session, alt="", fields="updated")
             if iserror(response)
                 return val
             else
@@ -139,7 +139,7 @@ function haskey{K, V}(store::KeyStore{K, V}, key::K; use_remote::Bool=store.use_
         end
     end
     name = store.key_writer(key)
-    response = storage(:Object, :get, store.bucket_name, name; session=store.session, alt="")
+    response = storage(:Object, :get, store.bucket_name, name; session=store.session, alt="", fields="")
     if !iserror(response)
         return true
     end
@@ -156,7 +156,7 @@ function keys{K, V}(store::KeyStore{K, V}; use_remote::Bool=store.use_remote, us
         return keys(store.cache)
     end
     result = use_cache ? collect(keys(store.cache)) : K[]
-    for response in storage(:Object, :list, store.bucket_name; session=store.session)
+    for response in storage(:Object, :list, store.bucket_name; session=store.session, fields="items(name)")
         name = response[:name]
         key = store.key_reader(name)
         if !isa(key, K)
@@ -190,7 +190,7 @@ function setindex!{K, V}(store::KeyStore{K, V}, val::V, key::K, use_remote::Bool
         name = store.key_writer(key)
         data = store.val_writer(val)
         response = storage(:Object, :insert, store.bucket_name; session=store.session,
-            name=name, data=data, content_type="application/octet-stream"
+            name=name, data=data, content_type="application/octet-stream", contentEncoding="gzip", fields=""
         )
         if iserror(response)
             error("Unable to set key '$key': $(response[:error][:message])")
@@ -208,7 +208,10 @@ function delete!{K, V}(store::KeyStore{K, V}, key::K; use_remote::Bool=store.use
     end
     if use_remote
         name = store.key_writer(key)
-        response = storage(:Object, :delete, store.bucket_name, name; session=store.session)
+        response = storage(:Object, :delete, store.bucket_name, name; session=store.session, fields="")
+        if iserror(response)
+            error("Unable to delete object: $(response[:error][:message])")
+        end
     else
         store.pending[key] = DELETE
     end
@@ -305,8 +308,8 @@ function clearcache!{K, V}(store::KeyStore{K, V})
 end
 
 function reset!{K, V}(store::KeyStore{K, V})
-    for object in storage(:Object, :list, store.bucket_name; session=store.session)
-        response = storage(:Object, :delete, store.bucket_name, object[:name]; session=store.session)
+    for object in storage(:Object, :list, store.bucket_name; session=store.session, fields="items(name)")
+        response = storage(:Object, :delete, store.bucket_name, object[:name]; session=store.session, fields="")
         if iserror(response)
             error("Unable to delete object: $(response[:error][:message])")
         end
@@ -314,7 +317,7 @@ function reset!{K, V}(store::KeyStore{K, V})
 end
 
 function delete!{K, V}(store::KeyStore{K, V})
-    response = storage(:Bucket, :delete, store.bucket_name; session=store.session)
+    response = storage(:Bucket, :delete, store.bucket_name; session=store.session, fields="")
     if iserror(response)
         error("Unable to delete bucket: $(response[:error][:message])")
     end
