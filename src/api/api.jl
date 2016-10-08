@@ -204,7 +204,7 @@ Optionally provide parameters and data (with optional MIME content-type).
 function execute(session::GoogleSession, resource::APIResource, method::APIMethod,
     path_args::String...;
     data::Any=nothing, content_type::String="application/json",
-    debug=false, raw=false,
+    debug=false, raw=false, gzip=true,
     params...
 )
     # check if data provided when not expected
@@ -238,9 +238,10 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         if content_type == "application/json" && !isa(data, Union{String, Vector{UInt8}})
             data = JSON.json(data)
         end
-    end
-    if get(params, :contentEncoding, "") == "gzip"
-        data = Vector{UInt8}(data) |> Libz.ZlibDeflateInputStream |> read
+        if gzip
+            params[:contentEncoding] = "gzip"
+            data = read(Vector{UInt8}(data) |> Libz.ZlibDeflateInputStream)
+        end
     end
     res = Requests.do_request(
         URIParser.URI(path_replace(method.path, path_args)), string(method.verb);

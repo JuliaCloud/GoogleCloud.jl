@@ -27,6 +27,7 @@ type KeyStore{K, V} <: Associative{K, V}
     key_writer::Function
     val_reader::Function
     val_writer::Function
+    gzip::Bool
     use_remote::Bool
     use_cache::Bool
     grace::Second
@@ -36,6 +37,7 @@ type KeyStore{K, V} <: Associative{K, V}
     function KeyStore(bucket_name::String;
         session::GoogleSession=get_session(storage),
         reset::Bool=false,
+        gzip::Bool=true,
         use_remote::Bool=true, use_cache::Bool=true,
         grace::Second=Second(5),
         key_reader::Function=(x) -> parse(K, x), key_writer::Function=string,
@@ -48,7 +50,7 @@ type KeyStore{K, V} <: Associative{K, V}
         store = new(bucket_name, session,
             key_reader, key_writer,
             val_reader, val_writer,
-            use_remote, use_cache, grace,
+            gzip, use_remote, use_cache, grace,
             Dict{K, V}(), Dict{K, Action}(), Dict{K, DateTime}()
         )
 
@@ -190,7 +192,7 @@ function setindex!{K, V}(store::KeyStore{K, V}, val::V, key::K, use_remote::Bool
         name = store.key_writer(key)
         data = store.val_writer(val)
         response = storage(:Object, :insert, store.bucket_name; session=store.session,
-            name=name, data=data, content_type="application/octet-stream", contentEncoding="gzip", fields=""
+            name=name, data=data, gzip=store.gzip, content_type="application/octet-stream", fields=""
         )
         if iserror(response)
             error("Unable to set key '$key': $(response[:error][:message])")
