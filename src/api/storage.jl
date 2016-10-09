@@ -26,7 +26,7 @@ storage = APIRoot(
         patch=APIMethod(:PATCH, "{bucket}", "Updates a bucket. This method supports patch semantics."),
         update=APIMethod(:PUT, "{bucket}", "Updates a bucket."),
     ),
-    BucketAccessControls=APIResource("b/{bucket}/acl";
+    BucketAccessControl=APIResource("b/{bucket}/acl";
         delete=APIMethod(:DELETE, "{entity}", "Permanently deletes the ACL entry for the specified entity on the specified bucket."),
         get=APIMethod(:GET, "{entity}", "Returns the ACL entry for the specified entity on the specified bucket."),
         insert=APIMethod(:POST, "", "Creates a new ACL entry on the specified bucket."),
@@ -50,7 +50,7 @@ storage = APIRoot(
         update=APIMethod(:PUT, "{object}", "Updates an object's metadata."),
         watchAll=APIMethod(:POST, "watch", "Watch for changes on all objects in a bucket."),
     ),
-    ObjectAccessControls=APIResource("b/{bucket}/o/{object}/acl";
+    ObjectAccessControl=APIResource("b/{bucket}/o/{object}/acl";
         delete=APIMethod(:DELETE, "{entity}", "Permanently deletes the ACL entry for the specified entity on the specified object."),
         get=APIMethod(:GET, "{entity}", "Returns the ACL entry for the specified entity on the specified object."),
         insert=APIMethod(:POST, "", "Creates a new ACL entry on the specified object."),
@@ -58,7 +58,7 @@ storage = APIRoot(
         patch=APIMethod(:PATCH, "{entity}", "Updates an ACL entry on the specified object. This method supports patch semantics."),
         update=APIMethod(:PUT, "{entity}", "Updates an ACL entry on the specified object."),
     ),
-    DefaultObjectAccessControls=APIResource("b/{bucket}/defaultObjectAcl";
+    DefaultObjectAccessControl=APIResource("b/{bucket}/defaultObjectAcl";
         delete=APIMethod(:DELETE, "entity", "Permanently deletes the default object ACL entry for the specified entity on the specified bucket."),
         get=APIMethod(:GET, "entity", "Returns the default object ACL entry for the specified entity on the specified bucket."),
         insert=APIMethod(:POST, "", "Creates a new default object ACL entry on the specified bucket."),
@@ -66,7 +66,7 @@ storage = APIRoot(
         patch=APIMethod(:PATCH, "entity", "Updates a default object ACL entry on the specified bucket. This method supports patch semantics."),
         update=APIMethod(:PUT, "entity", "Updates a default object ACL entry on the specified bucket."),
     ),
-    Channels=APIResource("channels";
+    Channel=APIResource("channels";
         stop=APIMethod(:POST, "stop", "Stop receiving object change notifications through this channel."),
     ),
 )

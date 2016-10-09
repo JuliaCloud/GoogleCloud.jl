@@ -34,7 +34,7 @@ type KeyStore{K, V} <: Associative{K, V}
     cache::Dict{K, V}
     pending::Dict{K, Action}
     cache_age::Dict{K, DateTime}
-    function KeyStore(bucket_name::String;
+    function KeyStore(bucket_name::AbstractString;
         session::GoogleSession=get_session(storage),
         reset::Bool=false,
         gzip::Bool=true,

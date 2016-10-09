@@ -19,7 +19,7 @@ An error in the provided credentials.
 """
 type CredentialError <: Error
     message::String
-    CredentialError(message::String) = new(message)
+    CredentialError(message::AbstractString) = new(message)
 end
 
 """
@@ -27,7 +27,7 @@ An error in establising a session.
 """
 type SessionError <: Error
     message::String
-    SessionError(message::String) = new(message)
+    SessionError(message::AbstractString) = new(message)
 end
 
 """
@@ -35,7 +35,7 @@ An error from the API.
 """
 type APIError <: Error
     message::String
-    APIError(message::String) = new(message)
+    APIError(message::AbstractString) = new(message)
 end
 
 end

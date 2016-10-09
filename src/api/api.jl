@@ -29,7 +29,7 @@ path_tokens("/{foo}/{bar}/x/{baz}")
  "{baz}"
 ```
 """
-path_tokens(path::String) = matchall(r"{\w+}", path)
+path_tokens(path::AbstractString) = matchall(r"{\w+}", path)
 
 """
     path_replace(path, values)
@@ -44,7 +44,7 @@ path_replace("/{foo}/{bar}/{baz}", ["this", "is", "it"])
 "/this/is/it"
 ```
 """
-path_replace(path::String, values) = reduce((x, y) -> replace(x, y[1], y[2], 1), path, zip(path_tokens(path), values))
+path_replace(path::AbstractString, values) = reduce((x, y) -> replace(x, y[1], y[2], 1), path, zip(path_tokens(path), values))
 
 """Check if response is/contains an error"""
 iserror(x::Any) = isa(x, Dict{Symbol, Any}) && haskey(x, :error)
@@ -60,7 +60,7 @@ type APIMethod
     description::String
     default_params::Dict{Symbol, Any}
     transform::Function
-    function APIMethod(verb::Symbol, path::String, description::String,
+    function APIMethod(verb::Symbol, path::AbstractString, description::AbstractString,
         default_params::Dict=Dict{Symbol, Any}();
         transform=(x, t) -> x
     )
@@ -83,10 +83,7 @@ type APIResource
     path::String
     methods::Dict{Symbol, APIMethod}
     transform::Union{Function, DataType}
-    function APIResource(path::String, transform=identity; methods...)
-        if isempty(path)
-            throw(APIError("Resource path can not be empty."))
-        end
+    function APIResource(path::AbstractString, transform=identity; methods...)
         if isempty(methods)
             throw(APIError("Resource must have at least one method."))
         end
@@ -95,7 +92,7 @@ type APIResource
 end
 function print(io::IO, x::APIResource)
     println(io, x.path, "\n")
-    for (name, method) in x.methods
+    for (name, method) in sort(collect(x.methods), by=(x) -> x[1])
         println(io, name)
         println(io, repeat("-", length(string(name))))
         println(io, method)
@@ -119,7 +116,7 @@ type APIRoot
     An API rooted at `path` with specified OAuth 2.0 access scopes and
     resources.
     """
-    function APIRoot(path::String, scopes::Dict{String, String}; resources...)
+    function APIRoot{K <: AbstractString, V <: AbstractString}(path::AbstractString, scopes::Dict{K, V}; resources...)
         if !isurl(path)
             throw(APIError("API root must be a valid URL."))
         end
@@ -145,7 +142,7 @@ type APIRoot
 end
 function print(io::IO, x::APIRoot)
     println(io, x.path, "\n")
-    for (name, resource) in x.resources
+    for (name, resource) in sort(collect(x.resources), by=(x) -> x[1])
         println(io, name)
         println(io, repeat("=", length(string(name))))
         println(io, resource)
@@ -195,16 +192,15 @@ function (api::APIRoot)(resource_name::Symbol, method_name::Symbol, args...; kwa
 end
 
 """
-    execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::String...[; ...])
+    execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::AbstractString...[; ...])
 
 Execute a method against the provided path arguments.
 
 Optionally provide parameters and data (with optional MIME content-type).
 """
-function execute(session::GoogleSession, resource::APIResource, method::APIMethod,
-    path_args::String...;
-    data::Any=nothing, content_type::String="application/json",
-    debug=false, raw=false, gzip=true,
+function execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::AbstractString...;
+    data::Union{AbstractString, Vector{UInt8}, Void}=nothing, gzip::Bool=true, content_type::AbstractString="application/json",
+    debug::Bool=false, raw::Bool=false,
     params...
 )
     # check if data provided when not expected
@@ -235,7 +231,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         if !isempty(content_type)
             headers["Content-Type"] = content_type
         end
-        if content_type == "application/json" && !isa(data, Union{String, Vector{UInt8}})
+        if content_type == "application/json" && !isa(data, Union{AbstractString, Vector{UInt8}})
             data = JSON.json(data)
         end
         if gzip
@@ -270,5 +266,6 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
 end
 
 include("storage.jl")
+include("compute.jl")
 
 end
