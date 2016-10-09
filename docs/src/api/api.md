@@ -9,3 +9,7 @@ Modules = [GoogleCloud.api]
 ```@autodocs
 Modules = [GoogleCloud.api._storage]
 ```
+
+```@autodocs
+Modules = [GoogleCloud.api._compute]
+```
