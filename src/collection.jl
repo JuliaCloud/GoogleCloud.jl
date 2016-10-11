@@ -41,14 +41,14 @@ type KeyStore{K, V} <: Associative{K, V}
         gzip::Bool=true,
         use_remote::Bool=true, use_cache::Bool=true,
         grace::Second=Second(5),
-        key_reader::Function=(x) -> parse(K, x), key_writer::Function=string,
-        val_reader::Function=(x) -> parse(V, x), val_writer::Function=string
+        key_reader::Function=identity, key_writer::Function=string,
+        val_reader::Function=identity, val_writer::Function=string
     )
         if !(use_remote || use_cache)
             error("Must use remote and/or cache but not neither")
         end
 
-        store = new(bucket_name, session,
+        store = new(lowercase(bucket_name), session,
             key_reader, key_writer,
             val_reader, val_writer,
             gzip, use_remote, use_cache, grace,
@@ -264,9 +264,10 @@ end
 iteratorsize{K, V}(::Type{KeyStore{K, V}}) = SizeUnknown()
 
 # notifications
-function watch{K, V}(store::KeyStore{K, V}, address::AbstractString)
-    channel = storage(:Object, :watchAll, control_bucket;
-        data=Dict(:type => "WEBHOOK", :address => address), session=store.session
+function watch{K, V}(store::KeyStore{K, V}, channel_id::AbstractString, address::AbstractString)
+    channel = storage(:Object, :watchAll, store.bucket_name;
+        data=Dict(:type => "WEBHOOK", :address => address, :id => channel_id),
+        session=store.session
     )
     if iserror(channel)
         error("Unable to watch bucket: $(channel[:error][:message])")
