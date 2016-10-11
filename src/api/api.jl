@@ -199,7 +199,7 @@ Execute a method against the provided path arguments.
 Optionally provide parameters and data (with optional MIME content-type).
 """
 function execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::AbstractString...;
-    data::Union{AbstractString, Vector{UInt8}, Void}=nothing, gzip::Bool=true, content_type::AbstractString="application/json",
+    data::Union{AbstractString, Associative, Vector{UInt8}, Void}=nothing, gzip::Bool=true, content_type::AbstractString="application/json",
     debug::Bool=false, raw::Bool=false,
     params...
 )

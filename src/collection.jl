@@ -1,6 +1,6 @@
 module collection
 
-export KeyStore, commit!, fetch!, sync!, clearcache!, clearpending!, reset!
+export KeyStore, commit!, fetch!, sync!, clearcache!, clearpending!, reset!, watch, unwatch
 
 using Base.Dates
 
@@ -34,6 +34,7 @@ type KeyStore{K, V} <: Associative{K, V}
     cache::Dict{K, V}
     pending::Dict{K, Action}
     cache_age::Dict{K, DateTime}
+    channel::Dict{Symbol, Any}
     function KeyStore(bucket_name::AbstractString;
         session::GoogleSession=get_session(storage),
         reset::Bool=false,
@@ -51,7 +52,8 @@ type KeyStore{K, V} <: Associative{K, V}
             key_reader, key_writer,
             val_reader, val_writer,
             gzip, use_remote, use_cache, grace,
-            Dict{K, V}(), Dict{K, Action}(), Dict{K, DateTime}()
+            Dict{K, V}(), Dict{K, Action}(), Dict{K, DateTime}(),
+            Dict{Symbol, Any}()
         )
 
         # establish availability of bucket
@@ -260,6 +262,27 @@ function done{K, V}(store::KeyStore{K, V}, state)
 end
 
 iteratorsize{K, V}(::Type{KeyStore{K, V}}) = SizeUnknown()
+
+# notifications
+function watch{K, V}(store::KeyStore{K, V}, address::AbstractString)
+    channel = storage(:Object, :watchAll, control_bucket;
+        data=Dict(:type => "WEBHOOK", :address => address), session=store.session
+    )
+    if iserror(channel)
+        error("Unable to watch bucket: $(channel[:error][:message])")
+    end
+    store.channel = channel
+    return channel
+end
+
+function unwatch{K, V}(store::KeyStore{K, V})
+    response = storage(:Channel, :stop; data=store.channel, session=store.session)
+    if iserror(response)
+        error("Unable to unwatch bucket: $(response[:error][:message])")
+    end
+    store.channel = typeof(store.channel)()
+    store
+end
 
 # committing
 function commit!{K, V}(store::KeyStore{K, V})
