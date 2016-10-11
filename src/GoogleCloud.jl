@@ -7,7 +7,7 @@ export
     GoogleCredentials, GoogleSession, authorize,
     set_session!, get_session
 export
-    storage, compute
+    iam, storage, compute, container
 export
     KeyStore, commit!, fetch!, sync!, clearcache!, clearpending!, reset!, watch, unwatch
 
@@ -26,6 +26,6 @@ using .api
 using .collection
 
 # API bindings
-import .api: _storage.storage, _compute.compute
+import .api: _iam.iam, _storage.storage, _compute.compute, _container.container
 
 end

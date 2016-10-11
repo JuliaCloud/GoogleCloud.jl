@@ -126,7 +126,9 @@ type APIRoot
         resources = Dict(resources)
         # build out non-absolute paths
         for resource in values(resources)
-            if !isurl(resource.path)
+            if isempty(resource.path)
+                resource.path = path
+            elseif !isurl(resource.path)
                 resource.path = "$(path)/$(resource.path)"
             end
             for method in values(resource.methods)
@@ -218,14 +220,6 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         "Authorization" => "$(auth[:token_type]) $(auth[:access_token])"
     )
 
-    # merge in default parameters
-    params = merge!(copy(method.default_params), Dict(params))
-
-    # add default project ID from credentials if not provided
-    if !haskey(params, :project)
-        params[:project] = session.credentials.project_id
-    end
-
     # serialise data to JSON if necessary
     if data != nothing
         if !isempty(content_type)
@@ -239,6 +233,15 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
             data = read(Vector{UInt8}(data) |> Libz.ZlibDeflateInputStream)
         end
     end
+
+    # merge in default parameters and evaluate any expressions
+    params = merge!(copy(method.default_params), Dict(params))
+    for (key, val) in params
+        if isa(val, Expr)
+            params[key] = eval(:((credentials, data) -> $val))(session.credentials, data)
+        end
+    end
+
     res = Requests.do_request(
         URIParser.URI(path_replace(method.path, path_args)), string(method.verb);
         query=params, data=data, headers=headers,
@@ -265,7 +268,9 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     end
 end
 
+include("iam.jl")
 include("storage.jl")
 include("compute.jl")
+include("container.jl")
 
 end
