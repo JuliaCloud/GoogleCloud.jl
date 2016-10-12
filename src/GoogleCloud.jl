@@ -9,7 +9,7 @@ export
 export
     iam, storage, compute, container
 export
-    KeyStore, commit!, fetch!, sync!, clearcache!, clearpending!, reset!, watch, unwatch
+    KeyStore, commit!, fetch!, sync!, clearcache!, clearpending!, destroy!, connect!, watch, unwatch
 
 # submodules
 include("root.jl")

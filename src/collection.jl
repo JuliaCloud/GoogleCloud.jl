@@ -1,6 +1,7 @@
 module collection
 
-export KeyStore, commit!, fetch!, sync!, clearcache!, clearpending!, reset!, watch, unwatch
+export
+    KeyStore, commit!, fetch!, sync!, clearcache!, clearpending!, destroy!, connect!, watch, unwatch
 
 using Base.Dates
 
@@ -10,19 +11,25 @@ using ..api._storage
 
 # higher-level access to API
 import Base:
-    print, show, display, getindex, setindex!, delete!, pop!, get, haskey, in,
+    print, show, display, getindex, setindex!, merge!, empty!, delete!, pop!, get, haskey, in,
     keys, values, start, next, done, iteratorsize, SizeUnknown,
     fetch
 
+type Box{T}
+    value::Union{T, Void}
+end
+Base.convert{T}(::Type{Box{T}}, x::Union{T, Void}) = Box{T}(x)
+Base.isnull(box::Box) = box.value == nothing
+Base.get(box::Box) = box.value
 
 @enum Action SET=1 DELETE=2
 
 """
 High-level container wrapping a Google Storage bucket
 """
-type KeyStore{K, V} <: Associative{K, V}
+immutable KeyStore{K, V} <: Associative{K, V}
     bucket_name::String
-    session::GoogleSession
+    session::Box{GoogleSession}
     key_reader::Function
     key_writer::Function
     val_reader::Function
@@ -33,13 +40,13 @@ type KeyStore{K, V} <: Associative{K, V}
     grace::Second
     cache::Dict{K, V}
     pending::Dict{K, Action}
-    cache_age::Dict{K, DateTime}
+    age::Dict{K, DateTime}
     channel::Dict{Symbol, Any}
     function KeyStore(bucket_name::AbstractString;
-        session::GoogleSession=get_session(storage),
-        reset::Bool=false,
+        session::Union{GoogleSession, Void}=get_session(storage),
+        empty::Bool=false,
         gzip::Bool=true,
-        use_remote::Bool=true, use_cache::Bool=true,
+        use_remote::Bool=session != nothing, use_cache::Bool=true,
         grace::Second=Second(5),
         key_reader::Function=identity, key_writer::Function=string,
         val_reader::Function=identity, val_writer::Function=string
@@ -47,8 +54,11 @@ type KeyStore{K, V} <: Associative{K, V}
         if !(use_remote || use_cache)
             error("Must use remote and/or cache but not neither")
         end
+        if session == nothing && use_remote
+            error("Cannot use remote without a session")
+        end
 
-        store = new(lowercase(bucket_name), session,
+        store = new(bucket_name, session,
             key_reader, key_writer,
             val_reader, val_writer,
             gzip, use_remote, use_cache, grace,
@@ -57,24 +67,32 @@ type KeyStore{K, V} <: Associative{K, V}
         )
 
         # establish availability of bucket
-        response = storage(:Bucket, :get, bucket_name; session=session, fields="")
-        if iserror(response)
-            code = response[:error][:code]
-            if code == 404  # not found (available)
-                response = storage(:Bucket, :insert; session=session, data=Dict(:name => bucket_name), fields="")
-                if iserror(response)
-                    error("Unable to create bucket: $(response[:error][:message])")
-                end
-            elseif code == 403  # forbidden (not available)
-                error("Bucket name already taken: $bucket_name")
-            else
-                error("Error checking bucket: $(response[:error][:message])")
-            end
-        elseif reset
-            reset!(store)
+        if session != nothing
+            connect!(store, session; empty=empty)
         end
         store
     end
+end
+
+function connect!(store::KeyStore, session::GoogleSession; empty::Bool=false)
+    response = storage(:Bucket, :get, store.bucket_name; session=session, fields="")
+    if iserror(response)
+        code = response[:error][:code]
+        if code == 404  # not found (available)
+            response = storage(:Bucket, :insert; session=session, data=Dict(:name => store.bucket_name), fields="")
+            if iserror(response)
+                error("Unable to create bucket: $(response[:error][:message])")
+            end
+        elseif code == 403  # forbidden (not available)
+            error("Bucket name already taken: $bucket_name")
+        else
+            error("Error checking bucket: $(response[:error][:message])")
+        end
+    elseif empty
+        empty!(store)
+    end
+    store.session.value = session
+    store
 end
 
 function print(io::IO, store::KeyStore)
@@ -90,12 +108,14 @@ display(store::KeyStore) = print(store)
 function getindex{K, V}(store::KeyStore{K, V}, key::K, use_remote::Bool=store.use_remote, use_cache::Bool=store.use_cache)
     if !use_remote
         return store.cache[key]
+    elseif isnull(store.session)
+        error("No session.")
     end
     name = store.key_writer(key)
     if use_cache
         if haskey(store.cache, key)
-            val, timestamp = store.cache[key], store.cache_age[key]
-            response = storage(:Object, :get, store.bucket_name, name; session=store.session, alt="", fields="updated")
+            val, timestamp = store.cache[key], store.age[key]
+            response = storage(:Object, :get, store.bucket_name, name; session=get(store.session), alt="", fields="updated")
             if iserror(response)
                 return val
             else
@@ -107,7 +127,7 @@ function getindex{K, V}(store::KeyStore{K, V}, key::K, use_remote::Bool=store.us
     end
 
     timestamp = now(UTC)
-    data = storage(:Object, :get, store.bucket_name, name; session=store.session)
+    data = storage(:Object, :get, store.bucket_name, name; session=get(store.session))
     if iserror(data)
         throw(KeyError(key))
     end
@@ -116,7 +136,7 @@ function getindex{K, V}(store::KeyStore{K, V}, key::K, use_remote::Bool=store.us
         throw(TypeError(:getindex, "$(store.bucket_name):$name", V, val))
     end
     if use_cache
-        store.cache[key], store.cache_age[key] = val, timestamp
+        store.cache[key], store.age[key] = val, timestamp
     end
     val
 end
@@ -136,6 +156,8 @@ end
 function haskey{K, V}(store::KeyStore{K, V}, key::K; use_remote::Bool=store.use_remote, use_cache::Bool=store.use_cache)
     if !use_remote
         return haskey(store.cache, key)
+    elseif isnull(store.session)
+        error("No session.")
     end
     if use_cache
         if haskey(store.cache, key)
@@ -143,7 +165,7 @@ function haskey{K, V}(store::KeyStore{K, V}, key::K; use_remote::Bool=store.use_
         end
     end
     name = store.key_writer(key)
-    response = storage(:Object, :get, store.bucket_name, name; session=store.session, alt="", fields="")
+    response = storage(:Object, :get, store.bucket_name, name; session=get(store.session), alt="", fields="")
     if !iserror(response)
         return true
     end
@@ -158,9 +180,11 @@ end
 function keys{K, V}(store::KeyStore{K, V}; use_remote::Bool=store.use_remote, use_cache::Bool=store.use_cache)
     if !use_remote
         return keys(store.cache)
+    elseif isnull(store.session)
+        error("No session.")
     end
     result = use_cache ? collect(keys(store.cache)) : K[]
-    for response in storage(:Object, :list, store.bucket_name; session=store.session, fields="items(name)")
+    for response in storage(:Object, :list, store.bucket_name; session=get(store.session), fields="items(name)")
         name = response[:name]
         key = store.key_reader(name)
         if !isa(key, K)
@@ -174,6 +198,8 @@ end
 function values{K, V}(store::KeyStore{K, V}; use_remote::Bool=store.use_remote, use_cache::Bool=store.use_cache)
     if !use_remote
         return values(store.cache)
+    elseif isnull(store.session)
+        error("No session.")
     end
 
     # avoiding race condition where values might have been deleted after keys were generated
@@ -187,19 +213,27 @@ end
 
 # setting values (commit)
 function setindex!{K, V}(store::KeyStore{K, V}, val::V, key::K, use_remote::Bool=store.use_remote, use_cache::Bool=store.use_cache)
-    if use_cache
-        store.cache[key], store.cache_age[key] = val, now(UTC)
+    if !use_remote
+        store.cache[key] = val
+        return store
+    elseif isnull(store.session)
+        error("No session.")
     end
+
+    store.cache[key], store.age[key] = val, now(UTC)
     if use_remote
+        if isnull(store.session)
+            error("No session.")
+        end
         name = store.key_writer(key)
         data = store.val_writer(val)
-        response = storage(:Object, :insert, store.bucket_name; session=store.session,
+        response = storage(:Object, :insert, store.bucket_name; session=get(store.session),
             name=name, data=data, gzip=store.gzip, content_type="application/octet-stream", fields=""
         )
         if iserror(response)
             error("Unable to set key '$key': $(response[:error][:message])")
         end
-    else
+    elseif session != nothing
         store.pending[key] = SET
     end
     store
@@ -208,11 +242,14 @@ end
 function delete!{K, V}(store::KeyStore{K, V}, key::K; use_remote::Bool=store.use_remote, use_cache::Bool=store.use_cache)
     if use_cache
         delete!(store.cache, key)
-        delete!(store.cache_age, key)
+        delete!(store.age, key)
     end
     if use_remote
+        if isnull(store.session)
+            error("No session.")
+        end
         name = store.key_writer(key)
-        response = storage(:Object, :delete, store.bucket_name, name; session=store.session, fields="")
+        response = storage(:Object, :delete, store.bucket_name, name; session=get(store.session), fields="")
         if iserror(response)
             error("Unable to delete object: $(response[:error][:message])")
         end
@@ -265,28 +302,46 @@ iteratorsize{K, V}(::Type{KeyStore{K, V}}) = SizeUnknown()
 
 # notifications
 function watch{K, V}(store::KeyStore{K, V}, channel_id::AbstractString, address::AbstractString)
+    if isnull(store.session)
+        error("No session.")
+    end
+    if !isempty(store.channel)
+        error("Already watching: $store.channel")
+    end
     channel = storage(:Object, :watchAll, store.bucket_name;
         data=Dict(:type => "WEBHOOK", :address => address, :id => channel_id),
-        session=store.session
+        session=get(store.session)
     )
     if iserror(channel)
         error("Unable to watch bucket: $(channel[:error][:message])")
     end
-    store.channel = channel
+    merge!(store.channel, channel)
     return channel
 end
 
 function unwatch{K, V}(store::KeyStore{K, V})
-    response = storage(:Channel, :stop; data=store.channel, session=store.session)
+    if isnull(store.session)
+        error("No session.")
+    end
+    response = storage(:Channel, :stop; data=store.channel, session=get(store.session))
     if iserror(response)
         error("Unable to unwatch bucket: $(response[:error][:message])")
     end
-    store.channel = typeof(store.channel)()
+    empty!(store.channel)
     store
 end
 
 # committing
+function merge!{K, V}(store::KeyStore{K, V}, d::Associative{K, V})
+    for (k, v) in d
+        store[k] = v
+    end
+end
+
 function commit!{K, V}(store::KeyStore{K, V})
+    if isnull(store.session)
+        error("No session.")
+    end
     use_remote, use_cache = true, false
     for key in collect(keys(store.pending))
         action = pop!(store.pending, key)
@@ -301,6 +356,9 @@ function commit!{K, V}(store::KeyStore{K, V})
 end
 
 function fetch!{K, V}(store::KeyStore{K, V}, key_list::K...)
+    if isnull(store.session)
+        error("No session.")
+    end
     if !isempty(store.pending)
         error("Pending actions must be committed or cleared before fetching.")
     end
@@ -310,7 +368,7 @@ function fetch!{K, V}(store::KeyStore{K, V}, key_list::K...)
     for key in key_list
         val = get(store, key, nothing; use_remote=true, use_cache=false)
         if val != nothing
-            store.cache[key], store.cache_age[key] = val, now(UTC)
+            store.cache[key], store.age[key] = val, now(UTC)
         end
     end
     store
@@ -323,33 +381,37 @@ function sync!{K, V}(store::KeyStore{K, V})
 end
 
 function clearpending!{K, V}(store::KeyStore{K, V})
-    store.pending = typeof(store.pending)()
+    empty!(store.pending)
     store
 end
 
 function clearcache!{K, V}(store::KeyStore{K, V})
     clearpending!(store)
-    store.cache, store.cache_age = typeof(store.cache)(), typeof(store.cache_age)()
+    empty!(store.cache)
+    empty!(store.age)
     store
 end
 
-function reset!{K, V}(store::KeyStore{K, V})
-    for object in storage(:Object, :list, store.bucket_name; session=store.session, fields="items(name)")
-        response = storage(:Object, :delete, store.bucket_name, object[:name]; session=store.session, fields="")
+function empty!{K, V}(store::KeyStore{K, V})
+    if isnull(store.session)
+        error("No session.")
+    end
+    for object in storage(:Object, :list, store.bucket_name; session=get(store.session), fields="items(name)")
+        response = storage(:Object, :delete, store.bucket_name, object[:name]; session=get(store.session), fields="")
         if iserror(response)
             error("Unable to delete object: $(response[:error][:message])")
         end
     end
 end
 
-function delete!{K, V}(store::KeyStore{K, V})
-    response = storage(:Bucket, :delete, store.bucket_name; session=store.session, fields="")
+function destroy!{K, V}(store::KeyStore{K, V})
+    if isnull(store.session)
+        error("No session.")
+    end
+    response = storage(:Bucket, :delete, store.bucket_name; session=get(store.session), fields="")
     if iserror(response)
         error("Unable to delete bucket: $(response[:error][:message])")
     end
-    store.bucket_name = "-"
-    store.use_remote = false
-    store.use_cache = true
     store
 end
 

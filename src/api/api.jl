@@ -219,6 +219,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     headers = Dict{String, String}(
         "Authorization" => "$(auth[:token_type]) $(auth[:access_token])"
     )
+    params = Dict(params)
 
     # serialise data to JSON if necessary
     if data != nothing
