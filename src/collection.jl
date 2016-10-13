@@ -108,8 +108,6 @@ display(store::KeyStore) = print(store)
 function getindex{K, V}(store::KeyStore{K, V}, key::K, use_remote::Bool=store.use_remote, use_cache::Bool=store.use_cache)
     if !use_remote
         return store.cache[key]
-    elseif isnull(store.session)
-        error("No session.")
     end
     name = store.key_writer(key)
     if use_cache
@@ -156,8 +154,6 @@ end
 function haskey{K, V}(store::KeyStore{K, V}, key::K; use_remote::Bool=store.use_remote, use_cache::Bool=store.use_cache)
     if !use_remote
         return haskey(store.cache, key)
-    elseif isnull(store.session)
-        error("No session.")
     end
     if use_cache
         if haskey(store.cache, key)
@@ -180,8 +176,6 @@ end
 function keys{K, V}(store::KeyStore{K, V}; use_remote::Bool=store.use_remote, use_cache::Bool=store.use_cache)
     if !use_remote
         return keys(store.cache)
-    elseif isnull(store.session)
-        error("No session.")
     end
     result = use_cache ? collect(keys(store.cache)) : K[]
     for response in storage(:Object, :list, store.bucket_name; session=get(store.session), fields="items(name)")
@@ -198,8 +192,6 @@ end
 function values{K, V}(store::KeyStore{K, V}; use_remote::Bool=store.use_remote, use_cache::Bool=store.use_cache)
     if !use_remote
         return values(store.cache)
-    elseif isnull(store.session)
-        error("No session.")
     end
 
     # avoiding race condition where values might have been deleted after keys were generated
@@ -216,15 +208,10 @@ function setindex!{K, V}(store::KeyStore{K, V}, val::V, key::K, use_remote::Bool
     if !use_remote
         store.cache[key] = val
         return store
-    elseif isnull(store.session)
-        error("No session.")
     end
 
     store.cache[key], store.age[key] = val, now(UTC)
     if use_remote
-        if isnull(store.session)
-            error("No session.")
-        end
         name = store.key_writer(key)
         data = store.val_writer(val)
         response = storage(:Object, :insert, store.bucket_name; session=get(store.session),
@@ -245,9 +232,6 @@ function delete!{K, V}(store::KeyStore{K, V}, key::K; use_remote::Bool=store.use
         delete!(store.age, key)
     end
     if use_remote
-        if isnull(store.session)
-            error("No session.")
-        end
         name = store.key_writer(key)
         response = storage(:Object, :delete, store.bucket_name, name; session=get(store.session), fields="")
         if iserror(response)
@@ -303,7 +287,8 @@ iteratorsize{K, V}(::Type{KeyStore{K, V}}) = SizeUnknown()
 # notifications
 function watch{K, V}(store::KeyStore{K, V}, channel_id::AbstractString, address::AbstractString)
     if isnull(store.session)
-        error("No session.")
+        warn("No session.")
+        return Dict{Symbol, Any}()
     end
     if !isempty(store.channel)
         error("Already watching: $store.channel")
@@ -321,7 +306,8 @@ end
 
 function unwatch{K, V}(store::KeyStore{K, V})
     if isnull(store.session)
-        error("No session.")
+        warn("No session.")
+        return store
     end
     response = storage(:Channel, :stop; data=store.channel, session=get(store.session))
     if iserror(response)
@@ -340,7 +326,8 @@ end
 
 function commit!{K, V}(store::KeyStore{K, V})
     if isnull(store.session)
-        error("No session.")
+        warn("No session.")
+        return store
     end
     use_remote, use_cache = true, false
     for key in collect(keys(store.pending))
@@ -357,7 +344,8 @@ end
 
 function fetch!{K, V}(store::KeyStore{K, V}, key_list::K...)
     if isnull(store.session)
-        error("No session.")
+        warn("No session.")
+        return store
     end
     if !isempty(store.pending)
         error("Pending actions must be committed or cleared before fetching.")
@@ -394,7 +382,8 @@ end
 
 function empty!{K, V}(store::KeyStore{K, V})
     if isnull(store.session)
-        error("No session.")
+        warn("No session.")
+        return store
     end
     for object in storage(:Object, :list, store.bucket_name; session=get(store.session), fields="items(name)")
         response = storage(:Object, :delete, store.bucket_name, object[:name]; session=get(store.session), fields="")
@@ -402,16 +391,19 @@ function empty!{K, V}(store::KeyStore{K, V})
             error("Unable to delete object: $(response[:error][:message])")
         end
     end
+    store
 end
 
 function destroy!{K, V}(store::KeyStore{K, V})
     if isnull(store.session)
-        error("No session.")
+        warn("No session.")
+        return store
     end
     response = storage(:Bucket, :delete, store.bucket_name; session=get(store.session), fields="")
     if iserror(response)
         error("Unable to delete bucket: $(response[:error][:message])")
     end
+    store.session.value = nothing
     store
 end
 
