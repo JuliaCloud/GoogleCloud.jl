@@ -207,10 +207,15 @@ end
 function setindex!{K, V}(store::KeyStore{K, V}, val::V, key::K, use_remote::Bool=store.use_remote, use_cache::Bool=store.use_cache)
     if !use_remote
         store.cache[key] = val
+        if session != nothing
+            store.pending[key] = SET
+        end
         return store
     end
 
-    store.cache[key], store.age[key] = val, now(UTC)
+    if use_cache
+        store.cache[key], store.age[key] = val, now(UTC)
+    end
     if use_remote
         name = store.key_writer(key)
         data = store.val_writer(val)
@@ -220,8 +225,6 @@ function setindex!{K, V}(store::KeyStore{K, V}, val::V, key::K, use_remote::Bool
         if iserror(response)
             error("Unable to set key '$key': $(response[:error][:message])")
         end
-    elseif session != nothing
-        store.pending[key] = SET
     end
     store
 end
@@ -333,6 +336,7 @@ function commit!{K, V}(store::KeyStore{K, V})
     for key in collect(keys(store.pending))
         action = pop!(store.pending, key)
         if action == SET
+            store.age[key] = now(UTC)
             val = store.cache[key]
             setindex!(store, val, key, use_remote, use_cache)
         elseif action == DELETE
