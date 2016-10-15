@@ -45,6 +45,7 @@ immutable KeyStore{K, V} <: Associative{K, V}
     function KeyStore(bucket_name::AbstractString;
         session::Union{GoogleSession, Void}=get_session(storage),
         empty::Bool=false,
+        location::AbstractString="US",
         gzip::Bool=true,
         use_remote::Bool=session != nothing, use_cache::Bool=true,
         grace::Second=Second(5),
@@ -68,18 +69,18 @@ immutable KeyStore{K, V} <: Associative{K, V}
 
         # establish availability of bucket
         if session != nothing
-            connect!(store, session; empty=empty)
+            connect!(store, session; location=location, empty=empty)
         end
         store
     end
 end
 
-function connect!(store::KeyStore, session::GoogleSession; empty::Bool=false)
+function connect!(store::KeyStore, session::GoogleSession; location::AbstractString="US", empty::Bool=false)
     response = storage(:Bucket, :get, store.bucket_name; session=session, fields="")
     if iserror(response)
         code = response[:error][:code]
         if code == 404  # not found (available)
-            response = storage(:Bucket, :insert; session=session, data=Dict(:name => store.bucket_name), fields="")
+            response = storage(:Bucket, :insert; session=session, data=Dict(:name => store.bucket_name, location=location), fields="")
             if iserror(response)
                 error("Unable to create bucket: $(response[:error][:message])")
             end
