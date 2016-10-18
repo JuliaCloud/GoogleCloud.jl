@@ -6,6 +6,10 @@ module GoogleCloud
 export
     GoogleCredentials, GoogleSession, authorize,
     set_session!, get_session
+export
+    iam, storage, compute, container
+export
+    KeyStore, commit!, fetch!, sync!, clearcache!, clearpending!, destroy!, connect!, watch, unwatch
 
 # submodules
 include("root.jl")
@@ -23,9 +27,6 @@ using .api
 using .collection
 
 # API bindings
-import .api._storage: storage
-export
-    storage, KeyStore,
-    commit!, fetch!, sync!, clearcache!, clearpending!, reset!
+import .api: _iam.iam, _storage.storage, _compute.compute, _container.container
 
 end

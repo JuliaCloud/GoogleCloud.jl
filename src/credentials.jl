@@ -50,7 +50,7 @@ end
 
 Load credentials from a JSON file.
 """
-GoogleCredentials(filename::String) = GoogleCredentials(JSON.parsefile(filename; dicttype=Dict{Symbol, String}))
+GoogleCredentials(filename::AbstractString) = GoogleCredentials(JSON.parsefile(filename; dicttype=Dict{Symbol, String}))
 GoogleCredentials(io::IO) = GoogleCredentials(JSON.parse(io; dicttype=Dict{Symbol, String}))
 
 function print(io::IO, x::GoogleCredentials)

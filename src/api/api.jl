@@ -8,6 +8,7 @@ export APIRoot, APIResource, APIMethod, set_session!, get_session, iserror
 import Base: show, print, getindex
 import Requests
 import URIParser
+import Libz
 import JSON
 
 using ..session
@@ -28,7 +29,7 @@ path_tokens("/{foo}/{bar}/x/{baz}")
  "{baz}"
 ```
 """
-path_tokens(path::String) = matchall(r"{\w+}", path)
+path_tokens(path::AbstractString) = matchall(r"{\w+}", path)
 
 """
     path_replace(path, values)
@@ -43,7 +44,7 @@ path_replace("/{foo}/{bar}/{baz}", ["this", "is", "it"])
 "/this/is/it"
 ```
 """
-path_replace(path::String, values) = reduce((x, y) -> replace(x, y[1], y[2], 1), path, zip(path_tokens(path), values))
+path_replace(path::AbstractString, values) = reduce((x, y) -> replace(x, y[1], URIParser.escape(y[2]), 1), path, zip(path_tokens(path), values))
 
 """Check if response is/contains an error"""
 iserror(x::Any) = isa(x, Dict{Symbol, Any}) && haskey(x, :error)
@@ -59,7 +60,7 @@ type APIMethod
     description::String
     default_params::Dict{Symbol, Any}
     transform::Function
-    function APIMethod(verb::Symbol, path::String, description::String,
+    function APIMethod(verb::Symbol, path::AbstractString, description::AbstractString,
         default_params::Dict=Dict{Symbol, Any}();
         transform=(x, t) -> x
     )
@@ -82,10 +83,7 @@ type APIResource
     path::String
     methods::Dict{Symbol, APIMethod}
     transform::Union{Function, DataType}
-    function APIResource(path::String, transform=identity; methods...)
-        if isempty(path)
-            throw(APIError("Resource path can not be empty."))
-        end
+    function APIResource(path::AbstractString, transform=identity; methods...)
         if isempty(methods)
             throw(APIError("Resource must have at least one method."))
         end
@@ -94,7 +92,7 @@ type APIResource
 end
 function print(io::IO, x::APIResource)
     println(io, x.path, "\n")
-    for (name, method) in x.methods
+    for (name, method) in sort(collect(x.methods), by=(x) -> x[1])
         println(io, name)
         println(io, repeat("-", length(string(name))))
         println(io, method)
@@ -118,7 +116,7 @@ type APIRoot
     An API rooted at `path` with specified OAuth 2.0 access scopes and
     resources.
     """
-    function APIRoot(path::String, scopes::Dict{String, String}; resources...)
+    function APIRoot{K <: AbstractString, V <: AbstractString}(path::AbstractString, scopes::Dict{K, V}; resources...)
         if !isurl(path)
             throw(APIError("API root must be a valid URL."))
         end
@@ -128,7 +126,9 @@ type APIRoot
         resources = Dict(resources)
         # build out non-absolute paths
         for resource in values(resources)
-            if !isurl(resource.path)
+            if isempty(resource.path)
+                resource.path = path
+            elseif !isurl(resource.path)
                 resource.path = "$(path)/$(resource.path)"
             end
             for method in values(resource.methods)
@@ -144,7 +144,7 @@ type APIRoot
 end
 function print(io::IO, x::APIRoot)
     println(io, x.path, "\n")
-    for (name, resource) in x.resources
+    for (name, resource) in sort(collect(x.resources), by=(x) -> x[1])
         println(io, name)
         println(io, repeat("=", length(string(name))))
         println(io, resource)
@@ -194,16 +194,15 @@ function (api::APIRoot)(resource_name::Symbol, method_name::Symbol, args...; kwa
 end
 
 """
-    execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::String...[; ...])
+    execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::AbstractString...[; ...])
 
 Execute a method against the provided path arguments.
 
 Optionally provide parameters and data (with optional MIME content-type).
 """
-function execute(session::GoogleSession, resource::APIResource, method::APIMethod,
-    path_args::String...;
-    data::Any=nothing, content_type::String="application/json",
-    debug=false, raw=false,
+function execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::AbstractString...;
+    data::Union{AbstractString, Associative, Vector{UInt8}, Void}=nothing, gzip::Bool=false, content_type::AbstractString="application/json",
+    debug::Bool=false, raw::Bool=false,
     params...
 )
     # check if data provided when not expected
@@ -220,36 +219,46 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     headers = Dict{String, String}(
         "Authorization" => "$(auth[:token_type]) $(auth[:access_token])"
     )
-
-    # merge in default parameters
-    params = merge!(copy(method.default_params), Dict(params))
-
-    # add default project ID from credentials if not provided
-    if !haskey(params, :project)
-        params[:project] = session.credentials.project_id
-    end
+    params = Dict(params)
 
     # serialise data to JSON if necessary
     if data != nothing
         if !isempty(content_type)
             headers["Content-Type"] = content_type
         end
-        if content_type == "application/json"
+        if content_type == "application/json" && !isa(data, Union{AbstractString, Vector{UInt8}})
             data = JSON.json(data)
         end
+        if gzip
+            params[:contentEncoding] = "gzip"
+            data = read(Vector{UInt8}(data) |> Libz.ZlibDeflateInputStream)
+        end
     end
+
+    # merge in default parameters and evaluate any expressions
+    params = merge!(copy(method.default_params), Dict(params))
+    for (key, val) in params
+        if isa(val, Expr)
+            params[key] = eval(:((credentials, data) -> $val))(session.credentials, data)
+        end
+    end
+
     res = Requests.do_request(
         URIParser.URI(path_replace(method.path, path_args)), string(method.verb);
-        query=params, data=data, headers=headers
+        query=params, data=data, headers=headers,
+        compressed=true
     )
 
     if debug
-        info("\n" * join(("  $name: $value" for (name, value) in sort(collect(res.headers))), "\n"))
-        info(String(res.data))
+        info("Request URL: $(get(res.request).uri)")
+        info("Request Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(get(res.request).headers))), "\n"))
+        info("Request Data:\n  " * base64encode(get(res.request).data))
+        info("Response Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(res.headers))), "\n"))
+        info("Response Data:\n  " * base64encode(res.data))
     end
 
     # if response is JSON, parse and return. otherwise, just dump data
-    if res.headers["Content-Length"] == "0"
+    if get(res.headers, "Content-Length", "") == "0"
         nothing
     elseif contains(res.headers["Content-Type"], "application/json")
         result = Requests.json(res; dicttype=Dict{Symbol, Any})
@@ -260,6 +269,9 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     end
 end
 
+include("iam.jl")
 include("storage.jl")
+include("compute.jl")
+include("container.jl")
 
 end

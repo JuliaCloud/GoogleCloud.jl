@@ -65,7 +65,7 @@ type GoogleSession
         new(credentials, scopes, Dict{String, String}(), 0)
     end
 end
-GoogleSession(filename::String, args...) = GoogleSession(GoogleCredentials(filename), args...)
+GoogleSession(filename::AbstractString, args...) = GoogleSession(GoogleCredentials(filename), args...)
 
 function print(io::IO, x::GoogleSession)
     println(io, "scopes: $(x.scopes)")
@@ -104,7 +104,7 @@ type JWTClaimSet
     scopes::Vector{String}
     assertion::DateTime
     expiry::DateTime
-    function JWTClaimSet(issuer::String, scopes::Vector{String},
+    function JWTClaimSet{S <: AbstractString}(issuer::AbstractString, scopes::Vector{S},
         assertion::DateTime=now(UTC), expiry::DateTime=now(UTC) + Hour(1))
         new(issuer, scopes, assertion, expiry)
     end

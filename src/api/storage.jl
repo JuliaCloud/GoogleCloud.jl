@@ -21,12 +21,17 @@ storage = APIRoot(
     Bucket=APIResource("b";
         delete=APIMethod(:DELETE, "{bucket}", "Permanently deletes an empty bucket."),
         get=APIMethod(:GET, "{bucket}", "Returns metadata for the specified bucket."),
-        insert=APIMethod(:POST, "", "Creates a new bucket."),
-        list=APIMethod(:GET, "", "Retrieves a list of buckets for a given project."; transform=(x, t) -> map(t, get(x, :items, []))),
+        insert=APIMethod(:POST, "", "Creates a new bucket.",
+            Dict(:project => :(credentials.project_id))
+        ),
+        list=APIMethod(:GET, "", "Retrieves a list of buckets for a given project.",
+            Dict(:project => :(credentials.project_id));
+            transform=(x, t) -> map(t, get(x, :items, []))
+        ),
         patch=APIMethod(:PATCH, "{bucket}", "Updates a bucket. This method supports patch semantics."),
         update=APIMethod(:PUT, "{bucket}", "Updates a bucket."),
     ),
-    BucketAccessControls=APIResource("b/{bucket}/acl";
+    BucketAccessControl=APIResource("b/{bucket}/acl";
         delete=APIMethod(:DELETE, "{entity}", "Permanently deletes the ACL entry for the specified entity on the specified bucket."),
         get=APIMethod(:GET, "{entity}", "Returns the ACL entry for the specified entity on the specified bucket."),
         insert=APIMethod(:POST, "", "Creates a new ACL entry on the specified bucket."),
@@ -50,7 +55,7 @@ storage = APIRoot(
         update=APIMethod(:PUT, "{object}", "Updates an object's metadata."),
         watchAll=APIMethod(:POST, "watch", "Watch for changes on all objects in a bucket."),
     ),
-    ObjectAccessControls=APIResource("b/{bucket}/o/{object}/acl";
+    ObjectAccessControl=APIResource("b/{bucket}/o/{object}/acl";
         delete=APIMethod(:DELETE, "{entity}", "Permanently deletes the ACL entry for the specified entity on the specified object."),
         get=APIMethod(:GET, "{entity}", "Returns the ACL entry for the specified entity on the specified object."),
         insert=APIMethod(:POST, "", "Creates a new ACL entry on the specified object."),
@@ -58,7 +63,7 @@ storage = APIRoot(
         patch=APIMethod(:PATCH, "{entity}", "Updates an ACL entry on the specified object. This method supports patch semantics."),
         update=APIMethod(:PUT, "{entity}", "Updates an ACL entry on the specified object."),
     ),
-    DefaultObjectAccessControls=APIResource("b/{bucket}/defaultObjectAcl";
+    DefaultObjectAccessControl=APIResource("b/{bucket}/defaultObjectAcl";
         delete=APIMethod(:DELETE, "entity", "Permanently deletes the default object ACL entry for the specified entity on the specified bucket."),
         get=APIMethod(:GET, "entity", "Returns the default object ACL entry for the specified entity on the specified bucket."),
         insert=APIMethod(:POST, "", "Creates a new default object ACL entry on the specified bucket."),
@@ -66,7 +71,7 @@ storage = APIRoot(
         patch=APIMethod(:PATCH, "entity", "Updates a default object ACL entry on the specified bucket. This method supports patch semantics."),
         update=APIMethod(:PUT, "entity", "Updates a default object ACL entry on the specified bucket."),
     ),
-    Channels=APIResource("channels";
+    Channel=APIResource("channels";
         stop=APIMethod(:POST, "stop", "Stop receiving object change notifications through this channel."),
     ),
 )
