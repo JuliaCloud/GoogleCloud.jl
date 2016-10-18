@@ -1,6 +1,6 @@
 module Storage
 
-export isgspath, gspath2bkt_key, gsupload, gsdownload
+export isgspath, gspath2bkt_key, gsread, gssave
 
 """
 setup credential session
@@ -31,15 +31,15 @@ end
 
 Upload String data to Google Cloud Storage
 """
-function gsupload(path::AbstractString, data::AbstractString; content_type = "text/html")
+function gssave(path::AbstractString, data::AbstractString; content_type = "text/html")
     bkt, key = gspath2bkt_key( configFile )
     storage(:Object, :insert, bkt; name = key, data=data, content_type=content_type)
 end
 
-function gsdownload(path::AbstractString)
+function gsread(path::AbstractString)
     bkt, key = gspath2bkt_key( configFile )
     storage(:Object, :get, bkt, key)
-end 
+end
 
 # """
 #     isgcsfile( path::AbstractString )
