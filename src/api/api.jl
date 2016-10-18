@@ -44,7 +44,7 @@ path_replace("/{foo}/{bar}/{baz}", ["this", "is", "it"])
 "/this/is/it"
 ```
 """
-path_replace(path::AbstractString, values) = reduce((x, y) -> replace(x, y[1], y[2], 1), path, zip(path_tokens(path), values))
+path_replace(path::AbstractString, values) = reduce((x, y) -> replace(x, y[1], URIParser.escape(y[2]), 1), path, zip(path_tokens(path), values))
 
 """Check if response is/contains an error"""
 iserror(x::Any) = isa(x, Dict{Symbol, Any}) && haskey(x, :error)
