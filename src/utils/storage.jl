@@ -1,4 +1,5 @@
 module Storage
+using GoogleCloud
 
 export isgspath, gspath2bkt_key, gsread, gssave
 
@@ -23,7 +24,7 @@ find bucket and key from a gs path
 function gspath2bkt_key( path::AbstractString )
     s = replace(path, "gs://", "")
     bkt, key = (split(s, "/"; limit=2) ...)
-    return String(Bkt), String(key)
+    return String(bkt), String(key)
 end
 
 """
@@ -32,7 +33,7 @@ end
 Upload String data to Google Cloud Storage
 """
 function gssave(path::AbstractString, data::AbstractString; content_type = "text/html")
-    bkt, key = gspath2bkt_key( configFile )
+    bkt, key = gspath2bkt_key( path )
     storage(:Object, :insert, bkt; name = key, data=data, content_type=content_type)
 end
 
