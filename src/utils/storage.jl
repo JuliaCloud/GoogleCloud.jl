@@ -2,6 +2,8 @@ module Storage
 using GoogleCloud
 using Blosc
 
+export create_bucket, delete_bucket
+export delete_object
 export isgspath, gspath2bkt_key, gsread, gssave
 
 """
@@ -18,6 +20,21 @@ function isgspath( path::AbstractString )
     return ismatch(r"^gs://*", path)
 end
 
+function create_bucket( bucketName::AbstractString )
+    bucketName = replace(bucketName, "gs://", "")
+    storage(:Bucket, :insert; data=Dict(:name => bucketName))
+end
+
+function delete_bucket( bucketName::AbstractString )
+    bucketName = replace(bucketName, "gs://", "")
+    storage(:Bucket, :delete, bucketName)
+end
+
+function delete_object( path::AbstractString )
+    bkt, key = gspath2bkt_key( path )
+    storage(:Object, :delete, bkt, key)
+end
+
 """
     gspath2bkt_key( path::AbstractString )
 
@@ -29,6 +46,13 @@ function gspath2bkt_key( path::AbstractString )
     return String(bkt), String(key)
 end
 
+function serialize_to_bytes(x)
+    io = IOBuffer()
+    serialize(io, x)
+    takebuf_array(io)
+end
+deserialize_bytes(x) = deserialize(IOBuffer(x))
+
 """
     upload(path::AbstractString, data::AbstractString; content_type = "text/html")
 
@@ -36,22 +60,13 @@ Upload String data to Google Cloud Storage
 """
 function gssave{T,N}(path::AbstractString, data::Array{T,N};
                         content_type = "image/jpeg", compression=:none)
+    s = serialize_to_bytes(data)
     if compression == :blosc
-        d = compress(data; level=5, shuffle=true, itemize=sizeof(T))
-    else
-        d = reinterpret(UInt8, data[:])
+        s = compress(s; level=5, shuffle=true, itemsize=sizeof(UInt8))
     end
-    gssave(path, d; content_type = content_type)
-end
-
-function gssave(path::AbstractString, data::Vector{UInt8};
-                    content_type = "image/jpeg", compression = :none)
-    if compression == :none
-        d = string(data)
-    else
-        error("unsupported compression methods: $(compression)")
-    end
-    gssave(path, d; content_type = content_type)
+    bkt, key = gspath2bkt_key( path )
+    storage(:Object, :insert, bkt; name = key,
+                data=s, content_type=content_type)
 end
 
 function gssave(path::AbstractString, data::AbstractString;
@@ -61,35 +76,31 @@ function gssave(path::AbstractString, data::AbstractString;
 end
 
 function gsread(    path::AbstractString;
-                    eltype::Type = String,
-                    shape::Tuple = (0,0),
                     compression::Symbol = :none)
     bkt, key = gspath2bkt_key( path )
     data = storage(:Object, :get, bkt, key)
+
+    # decompress and then deserialize_bytes
     if compression == :blosc
-        data = decompress(eltype, Vector{UInt8}(data))
-    else
-        data = reinterpret(eltype, data)
+        data = serialize_to_bytes(data)
+        data = decompress(UInt8, data)
     end
-    if shape != (0,0)
-        data = reshape(data, shape)
-    end
-    data
+    return deserialize_bytes(data)
 end
 
-# """
-#     isgcsfile( path::AbstractString )
-#
-# whether this file is in Google Cloud Storage or not
-# """
-# function isgcsfile( path::AbstractString )
-#     if !isgcspath(path)
-#         return false
-#     else
-#         bkt, key = gspath2bkt_key(path)
-#
-#     end
-# end
+"""
+    isgcsfile( path::AbstractString )
+
+whether this file is in Google Cloud Storage or not
+"""
+function isgsfile( path::AbstractString )
+    if !isgspath(path)
+        return false
+    else
+        bkt, key = gspath2bkt_key(path)
+        error("not implemented yet...")
+    end
+end
 
 
 end # end of module Storage
