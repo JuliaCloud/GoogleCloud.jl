@@ -80,7 +80,7 @@ function connect!(store::KeyStore, session::GoogleSession; location::AbstractStr
     if iserror(response)
         code = response[:error][:code]
         if code == 404  # not found (available)
-            response = storage(:Bucket, :insert; session=session, data=Dict(:name => store.bucket_name, location=location), fields="")
+            response = storage(:Bucket, :insert; session=session, data=Dict(:name => store.bucket_name, :location=location), fields="")
             if iserror(response)
                 error("Unable to create bucket: $(response[:error][:message])")
             end
