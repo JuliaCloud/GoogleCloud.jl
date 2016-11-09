@@ -207,8 +207,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
 )
     # check if data provided when not expected
     if (data !== nothing) $ in(method.verb, (:POST, :UPDATE, :PATCH, :PUT))
-        action = data === nothing ? "supplied" : "supported"
-        throw(APIError("Resource data not $action for method"))
+        data = nothing
     end
     if length(path_args) != length(path_tokens(method.path))
         throw(APIError("Number of path arguments do not match"))
@@ -233,6 +232,8 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
             params[:contentEncoding] = "gzip"
             data = read(Vector{UInt8}(data) |> Libz.ZlibDeflateInputStream)
         end
+    else
+        headers["Content-Length"] = "0"
     end
 
     # merge in default parameters and evaluate any expressions
@@ -273,5 +274,6 @@ include("iam.jl")
 include("storage.jl")
 include("compute.jl")
 include("container.jl")
+include("pubsub.jl")
 
 end
