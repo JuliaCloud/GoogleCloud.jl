@@ -187,7 +187,7 @@ function (api::APIRoot)(resource_name::Symbol, method_name::Symbol, args...; kwa
     end
     kwargs = Dict(kwargs)
     session = pop!(kwargs, :session, get_session(api))
-    if session == nothing
+    if session === nothing
         throw(SessionError("Cannot use API without a session."))
     end
     execute(session, resource, method, args...; kwargs...)
@@ -206,8 +206,8 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     params...
 )
     # check if data provided when not expected
-    if (data != nothing) $ in(method.verb, (:POST, :UPDATE, :PATCH, :PUT))
-        action = data == nothing ? "supplied" : "supported"
+    if (data !== nothing) $ in(method.verb, (:POST, :UPDATE, :PATCH, :PUT))
+        action = data === nothing ? "supplied" : "supported"
         throw(APIError("Resource data not $action for method"))
     end
     if length(path_args) != length(path_tokens(method.path))
@@ -222,7 +222,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     params = Dict(params)
 
     # serialise data to JSON if necessary
-    if data != nothing
+    if data !== nothing
         if !isempty(content_type)
             headers["Content-Type"] = content_type
         end
