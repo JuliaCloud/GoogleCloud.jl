@@ -3,8 +3,8 @@
 
     
     <url>
-     <loc>None/</loc>
-     <lastmod>2016-10-25</lastmod>
+     <loc>/</loc>
+     <lastmod>2016-11-09</lastmod>
      <changefreq>daily</changefreq>
     </url>
     
@@ -12,14 +12,14 @@
     
         
     <url>
-     <loc>None/custom_api/</loc>
-     <lastmod>2016-10-25</lastmod>
+     <loc>/custom_api/</loc>
+     <lastmod>2016-11-09</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
-     <loc>None/custom_api/keystore/</loc>
-     <lastmod>2016-10-25</lastmod>
+     <loc>/custom_api/keystore/</loc>
+     <lastmod>2016-11-09</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
@@ -28,32 +28,32 @@
     
         
     <url>
-     <loc>None/api/credentials/</loc>
-     <lastmod>2016-10-25</lastmod>
+     <loc>/api/credentials/</loc>
+     <lastmod>2016-11-09</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
-     <loc>None/api/session/</loc>
-     <lastmod>2016-10-25</lastmod>
+     <loc>/api/session/</loc>
+     <lastmod>2016-11-09</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
-     <loc>None/api/api/</loc>
-     <lastmod>2016-10-25</lastmod>
+     <loc>/api/api/</loc>
+     <lastmod>2016-11-09</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
-     <loc>None/api/root/</loc>
-     <lastmod>2016-10-25</lastmod>
+     <loc>/api/root/</loc>
+     <lastmod>2016-11-09</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
-     <loc>None/api/error/</loc>
-     <lastmod>2016-10-25</lastmod>
+     <loc>/api/error/</loc>
+     <lastmod>2016-11-09</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
