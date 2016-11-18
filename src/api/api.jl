@@ -275,5 +275,6 @@ include("storage.jl")
 include("compute.jl")
 include("container.jl")
 include("pubsub.jl")
+include("logging.jl")
 
 end
