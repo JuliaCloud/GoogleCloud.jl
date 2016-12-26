@@ -30,7 +30,7 @@ function SHA256withRSA(message, key)
     )
 
     # sign the message digest
-    output = Array(UInt8, 256)
+    output = Vector{UInt8}(Int64(ceil(MbedTLS.bitlength(ctx) / 8)))
     MbedTLS.sign!(ctx, MbedTLS.MD_SHA256,
         MbedTLS.digest(MbedTLS.MD_SHA256, message),
         output, MbedTLS.MersenneTwister(0)

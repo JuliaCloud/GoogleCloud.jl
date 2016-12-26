@@ -19,7 +19,7 @@ type Box{T}
     value::Union{T, Void}
 end
 Base.convert{T}(::Type{Box{T}}, x::Union{T, Void}) = Box{T}(x)
-Base.isnull(box::Box) = box.value == nothing
+Base.isnull(box::Box) = box.value === nothing
 Base.get(box::Box) = box.value
 
 @enum Action SET=1 DELETE=2
@@ -47,7 +47,7 @@ immutable KeyStore{K, V} <: Associative{K, V}
         empty::Bool=false,
         location::AbstractString="US",
         gzip::Bool=true,
-        use_remote::Bool=session != nothing, use_cache::Bool=true,
+        use_remote::Bool=session !== nothing, use_cache::Bool=true,
         grace::Second=Second(5),
         key_reader::Function=identity, key_writer::Function=string,
         val_reader::Function=identity, val_writer::Function=string
@@ -55,7 +55,7 @@ immutable KeyStore{K, V} <: Associative{K, V}
         if !(use_remote || use_cache)
             error("Must use remote and/or cache but not neither")
         end
-        if session == nothing && use_remote
+        if session === nothing && use_remote
             error("Cannot use remote without a session")
         end
 
@@ -68,7 +68,7 @@ immutable KeyStore{K, V} <: Associative{K, V}
         )
 
         # establish availability of bucket
-        if session != nothing
+        if session !== nothing
             connect!(store, session; location=location, empty=empty)
         end
         store
@@ -80,7 +80,7 @@ function connect!(store::KeyStore, session::GoogleSession; location::AbstractStr
     if iserror(response)
         code = response[:error][:code]
         if code == 404  # not found (available)
-            response = storage(:Bucket, :insert; session=session, data=Dict(:name => store.bucket_name, location=location), fields="")
+            response = storage(:Bucket, :insert; session=session, data=Dict(:name => store.bucket_name, :location => location), fields="")
             if iserror(response)
                 error("Unable to create bucket: $(response[:error][:message])")
             end
@@ -200,7 +200,7 @@ function values{K, V}(store::KeyStore{K, V}; use_remote::Bool=store.use_remote, 
         x for x in (
             get(store, key, nothing; use_remote=use_remote, use_cache=use_cache)
             for key in keys(store; use_remote=use_remote, use_cache=use_cache)
-        ) if x != nothing
+        ) if x !== nothing
     ]
 end
 
@@ -208,7 +208,7 @@ end
 function setindex!{K, V}(store::KeyStore{K, V}, val::V, key::K, use_remote::Bool=store.use_remote, use_cache::Bool=store.use_cache)
     if !use_remote
         store.cache[key] = val
-        if session != nothing
+        if session !== nothing
             store.pending[key] = SET
         end
         return store
@@ -264,7 +264,7 @@ function fast_forward{K, V}(store::KeyStore{K, V}, key_list)
     while !isempty(key_list)
         key = pop!(key_list)
         val = get(store, key, nothing)
-        if val != nothing
+        if val !== nothing
             return Pair{K, V}(key, val)
         end
     end
@@ -283,7 +283,7 @@ end
 
 function done{K, V}(store::KeyStore{K, V}, state)
     pair, key_list = state
-    pair == nothing
+    pair === nothing
 end
 
 iteratorsize{K, V}(::Type{KeyStore{K, V}}) = SizeUnknown()
@@ -360,7 +360,7 @@ function fetch!{K, V}(store::KeyStore{K, V}, key_list::K...)
     end
     for key in key_list
         val = get(store, key, nothing; use_remote=true, use_cache=false)
-        if val != nothing
+        if val !== nothing
             store.cache[key], store.age[key] = val, now(UTC)
         end
     end

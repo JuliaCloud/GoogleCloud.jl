@@ -53,6 +53,8 @@ Load credentials from a JSON file.
 GoogleCredentials(filename::AbstractString) = GoogleCredentials(JSON.parsefile(filename; dicttype=Dict{Symbol, String}))
 GoogleCredentials(io::IO) = GoogleCredentials(JSON.parse(io; dicttype=Dict{Symbol, String}))
 
+Base.convert(::Type{GoogleCredentials}, x::AbstractString) = GoogleCredentials(x)
+
 function print(io::IO, x::GoogleCredentials)
     fields = [:client_id, :client_email, :account_type, :project_id]
     print(io, join(("$field: $(getfield(x, field))" for field in fields), "\n"))
