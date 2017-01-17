@@ -33,7 +33,7 @@ immutable KeyStore{K, V} <: Associative{K, V}
             gzip, Dict{Symbol, Any}()
         )
         # establish availability of bucket
-        connect!(store, session; location=location, empty=empty)
+        connect!(store; location=location, empty=empty)
         store
     end
 end
