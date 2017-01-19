@@ -131,12 +131,11 @@ function JWS(credentials::GoogleCredentials, claimset::JWTClaimSet, header::JWTH
 end
 
 """
-    authorize(session[; cache=true)
+    authorize(session; cache=true)
 
 Get OAuth 2.0 authorisation token from Google.
 
-If `cache` set to `true`, get a new token only if the existing token has not
-expired.
+If `cache` set to `true`, get a new token only if the existing token has expired.
 """
 function authorize(session::GoogleSession; cache=true)
     # don't get a new token if a non-expired one exists
