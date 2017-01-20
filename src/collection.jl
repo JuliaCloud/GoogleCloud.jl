@@ -47,7 +47,7 @@ immutable KeyStore{K, V} <: Associative{K, V}
     function KeyStore(bucket_name::AbstractString, session::GoogleSession=get_session(storage);
         location::AbstractString="US", empty::Bool=false, gzip::Bool=true,
         key_format::Union{Symbol, AbstractString}=K <: String ? :string : :json,
-        val_format::Union{Symbol, AbstractString}=:msgpack
+        val_format::Union{Symbol, AbstractString}=:json
     )
         key_encoder, key_decoder = try key_format_map[Symbol(key_format)] catch
             error("Unknown key format: $key_format")
