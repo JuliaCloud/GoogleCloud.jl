@@ -170,7 +170,7 @@
 <p><a id='GoogleCloud.session' href='#GoogleCloud.session'>#</a>
 <strong><code>GoogleCloud.session</code></strong> &mdash; <em>Module</em>.</p>
 <p>OAuth 2.0 Google Sessions</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/6ae44fb4ada57288844db060b46b4042cb3e3b2c/src/session.jl#L1-L3' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/session.jl#L1-L3' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.session.GoogleSession' href='#GoogleCloud.session.GoogleSession'>#</a>
 <strong><code>GoogleCloud.session.GoogleSession</code></strong> &mdash; <em>Type</em>.</p>
 <p>GoogleSession(...)</p>
@@ -179,7 +179,7 @@
 <pre><code class="julia">sess = GoogleSession(GoogleCredentials(expanduser(&quot;~/auth.json&quot;)), [&quot;devstorage.full_control&quot;])
 </code></pre>
 
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/6ae44fb4ada57288844db060b46b4042cb3e3b2c/src/session.jl#L42-L52' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/session.jl#L42-L52' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.session.authorize-Tuple{GoogleCloud.session.GoogleSession}' href='#GoogleCloud.session.authorize-Tuple{GoogleCloud.session.GoogleSession}'>#</a>
 <strong><code>GoogleCloud.session.authorize</code></strong> &mdash; <em>Method</em>.</p>
 <pre><code>authorize(session; cache=true)
@@ -187,42 +187,42 @@
 
 <p>Get OAuth 2.0 authorisation token from Google.</p>
 <p>If <code>cache</code> set to <code>true</code>, get a new token only if the existing token has expired.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/6ae44fb4ada57288844db060b46b4042cb3e3b2c/src/session.jl#L133-L139' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/session.jl#L133-L139' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.session.JWTClaimSet' href='#GoogleCloud.session.JWTClaimSet'>#</a>
 <strong><code>GoogleCloud.session.JWTClaimSet</code></strong> &mdash; <em>Type</em>.</p>
 <pre><code>JWTClaimSet
 </code></pre>
 
 <p>JSON Web Token claim-set.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/6ae44fb4ada57288844db060b46b4042cb3e3b2c/src/session.jl#L97-L101' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/session.jl#L97-L101' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.session.JWTHeader' href='#GoogleCloud.session.JWTHeader'>#</a>
 <strong><code>GoogleCloud.session.JWTHeader</code></strong> &mdash; <em>Type</em>.</p>
 <pre><code>JWTHeader
 </code></pre>
 
 <p>JSON Web Token header.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/6ae44fb4ada57288844db060b46b4042cb3e3b2c/src/session.jl#L84-L88' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/session.jl#L84-L88' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.session.JWS' href='#GoogleCloud.session.JWS'>#</a>
 <strong><code>GoogleCloud.session.JWS</code></strong> &mdash; <em>Function</em>.</p>
 <pre><code>JWS(credentials, claimset)
 </code></pre>
 
 <p>Construct the Base64-encoded JSON Web Signature based on the JWT header, claimset and signed using the private key provided in the Google JSON service-account key.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/6ae44fb4ada57288844db060b46b4042cb3e3b2c/src/session.jl#L121-L126' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/session.jl#L121-L126' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.session.SHA256withRSA-Tuple{Any,Any}' href='#GoogleCloud.session.SHA256withRSA-Tuple{Any,Any}'>#</a>
 <strong><code>GoogleCloud.session.SHA256withRSA</code></strong> &mdash; <em>Method</em>.</p>
 <pre><code>SHA256withRSA(message, key)
 </code></pre>
 
 <p>Sign message using private key with RSASSA-PKCS1-V1_5-SIGN algorithm.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/6ae44fb4ada57288844db060b46b4042cb3e3b2c/src/session.jl#L18-L22' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/session.jl#L18-L22' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.session.unixseconds-Tuple{DateTime}' href='#GoogleCloud.session.unixseconds-Tuple{DateTime}'>#</a>
 <strong><code>GoogleCloud.session.unixseconds</code></strong> &mdash; <em>Method</em>.</p>
 <pre><code>unixseconds(x)
 </code></pre>
 
 <p>Convert date-time into unix seconds.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/6ae44fb4ada57288844db060b46b4042cb3e3b2c/src/session.jl#L77-L81' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/session.jl#L77-L81' class='documenter-source'>source</a><br></p>
               
             </div>
           </div>
