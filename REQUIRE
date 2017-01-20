@@ -3,4 +3,5 @@ julia 0.5.0
 Requests
 MbedTLS
 JSON
+MsgPack
 URIParser
