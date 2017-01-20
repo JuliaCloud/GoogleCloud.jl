@@ -172,46 +172,46 @@
 <p><a id='GoogleCloud.api' href='#GoogleCloud.api'>#</a>
 <strong><code>GoogleCloud.api</code></strong> &mdash; <em>Module</em>.</p>
 <p>General framework for representing Google JSON APIs.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/api.jl#L1-L3' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/api.jl#L1-L3' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.api.APIMethod' href='#GoogleCloud.api.APIMethod'>#</a>
 <strong><code>GoogleCloud.api.APIMethod</code></strong> &mdash; <em>Type</em>.</p>
 <pre><code>APIMethod(verb, path, description)
 </code></pre>
 
 <p>Maps a method in the API to an HTTP verb and path.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/api.jl#L52-L56' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/api.jl#L52-L56' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.api.APIResource' href='#GoogleCloud.api.APIResource'>#</a>
 <strong><code>GoogleCloud.api.APIResource</code></strong> &mdash; <em>Type</em>.</p>
 <pre><code>APIResource(path, methods)
 </code></pre>
 
 <p>Represents a resource in the API, typically rooted at a specific point in the REST hierarchy.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/api.jl#L76-L81' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/api.jl#L76-L81' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.api.APIRoot' href='#GoogleCloud.api.APIRoot'>#</a>
 <strong><code>GoogleCloud.api.APIRoot</code></strong> &mdash; <em>Type</em>.</p>
 <pre><code>APIRoot(...)
 </code></pre>
 
 <p>Represent a Google JSON API containing resources, accessible via scopes.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/api.jl#L103-L107' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/api.jl#L103-L107' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.api.get_session-Tuple{GoogleCloud.api.APIRoot}' href='#GoogleCloud.api.get_session-Tuple{GoogleCloud.api.APIRoot}'>#</a>
 <strong><code>GoogleCloud.api.get_session</code></strong> &mdash; <em>Method</em>.</p>
 <pre><code>get_session(api)
 </code></pre>
 
 <p>Get the default session (if any) for a specific API. Session is <code>nothing</code> if not set.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/api.jl#L167-L172' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/api.jl#L167-L172' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.api.iserror-Tuple{Any}' href='#GoogleCloud.api.iserror-Tuple{Any}'>#</a>
 <strong><code>GoogleCloud.api.iserror</code></strong> &mdash; <em>Method</em>.</p>
 <p>Check if response is/contains an error</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/api.jl#L49' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/api.jl#L49' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.api.set_session!-Tuple{GoogleCloud.api.APIRoot,Union{GoogleCloud.session.GoogleSession,Void}}' href='#GoogleCloud.api.set_session!-Tuple{GoogleCloud.api.APIRoot,Union{GoogleCloud.session.GoogleSession,Void}}'>#</a>
 <strong><code>GoogleCloud.api.set_session!</code></strong> &mdash; <em>Method</em>.</p>
 <pre><code>set_session!(api, session)
 </code></pre>
 
 <p>Set the default session for a specific API. Set session to <code>nothing</code> to forget session.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/api.jl#L156-L161' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/api.jl#L156-L161' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.api.execute-Tuple{GoogleCloud.session.GoogleSession,GoogleCloud.api.APIResource,GoogleCloud.api.APIMethod,Vararg{AbstractString,N}}' href='#GoogleCloud.api.execute-Tuple{GoogleCloud.session.GoogleSession,GoogleCloud.api.APIResource,GoogleCloud.api.APIMethod,Vararg{AbstractString,N}}'>#</a>
 <strong><code>GoogleCloud.api.execute</code></strong> &mdash; <em>Method</em>.</p>
 <pre><code>execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::AbstractString...[; ...])
@@ -219,7 +219,7 @@
 
 <p>Execute a method against the provided path arguments.</p>
 <p>Optionally provide parameters and data (with optional MIME content-type).</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/api.jl#L196-L202' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/api.jl#L196-L202' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.api.path_replace-Tuple{AbstractString,Any}' href='#GoogleCloud.api.path_replace-Tuple{AbstractString,Any}'>#</a>
 <strong><code>GoogleCloud.api.path_replace</code></strong> &mdash; <em>Method</em>.</p>
 <pre><code>path_replace(path, values)
@@ -232,7 +232,7 @@
 &quot;/this/is/it&quot;
 </code></pre>
 
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/api.jl#L34-L46' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/api.jl#L34-L46' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.api.path_tokens-Tuple{AbstractString}' href='#GoogleCloud.api.path_tokens-Tuple{AbstractString}'>#</a>
 <strong><code>GoogleCloud.api.path_tokens</code></strong> &mdash; <em>Method</em>.</p>
 <pre><code>path_tokens(path)
@@ -247,25 +247,25 @@
  &quot;{baz}&quot;
 </code></pre>
 
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/api.jl#L18-L31' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/api.jl#L18-L31' class='documenter-source'>source</a><br></p>
 <p><a id='Implemented-APIs-1'></a></p>
 <h2 id="implemented-apis">Implemented APIs</h2>
 <p><a id='GoogleCloud.api._storage' href='#GoogleCloud.api._storage'>#</a>
 <strong><code>GoogleCloud.api._storage</code></strong> &mdash; <em>Module</em>.</p>
 <p>Google Cloud Storage API</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/storage.jl#L1-L3' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/storage.jl#L1-L3' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.api._storage.storage' href='#GoogleCloud.api._storage.storage'>#</a>
 <strong><code>GoogleCloud.api._storage.storage</code></strong> &mdash; <em>Constant</em>.</p>
 <p>Google Cloud Storage API root.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/storage.jl#L11-L13' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/storage.jl#L11-L13' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.api._compute' href='#GoogleCloud.api._compute'>#</a>
 <strong><code>GoogleCloud.api._compute</code></strong> &mdash; <em>Module</em>.</p>
 <p>Google Compute Engine API</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/compute.jl#L1-L3' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/compute.jl#L1-L3' class='documenter-source'>source</a><br></p>
 <p><a id='GoogleCloud.api._compute.compute' href='#GoogleCloud.api._compute.compute'>#</a>
 <strong><code>GoogleCloud.api._compute.compute</code></strong> &mdash; <em>Constant</em>.</p>
 <p>Google Compute Engine API root.</p>
-<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/ba91df3e2d6eb5591e4a6995f99e70f634a773e8/src/api/compute.jl#L11-L13' class='documenter-source'>source</a><br></p>
+<p><a target='_blank' href='https://github.com/joshbode/GoogleCloud.jl/tree/d10b42a58199253f9616287c5e3f2314c1b223a6/src/api/compute.jl#L11-L13' class='documenter-source'>source</a><br></p>
               
             </div>
           </div>
