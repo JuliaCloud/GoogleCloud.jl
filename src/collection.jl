@@ -27,8 +27,9 @@ key_format_map = Dict{Symbol, Tuple{Function, Function}}(
 
 # value serialiser/deserialiser pairs
 val_format_map = Dict{Symbol, Tuple{Function, Function}}(
-    :julia => (_serialize_bytes, _deserialize_bytes),
+    :string => (string, identity),
     :json => (JSON.json, JSON.parse),
+    :julia => (_serialize_bytes, _deserialize_bytes),
     :msgpack => (MsgPack.pack, MsgPack.unpack)
 )
 
@@ -47,7 +48,7 @@ immutable KeyStore{K, V} <: Associative{K, V}
     function KeyStore(bucket_name::AbstractString, session::GoogleSession=get_session(storage);
         location::AbstractString="US", empty::Bool=false, gzip::Bool=true,
         key_format::Union{Symbol, AbstractString}=K <: String ? :string : :json,
-        val_format::Union{Symbol, AbstractString}=:json
+        val_format::Union{Symbol, AbstractString}=V <: String ? :string : :json
     )
         key_encoder, key_decoder = try key_format_map[Symbol(key_format)] catch
             error("Unknown key format: $key_format")
