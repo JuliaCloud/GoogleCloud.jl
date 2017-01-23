@@ -27,8 +27,8 @@ key_format_map = Dict{Symbol, Tuple{Function, Function}}(
 
 # value serialiser/deserialiser pairs
 val_format_map = Dict{Symbol, Tuple{Function, Function}}(
-    :string => (string, identity),
     :json => (JSON.json, JSON.parse),
+    :string => (string, identity),
     :julia => (_serialize_bytes, _deserialize_bytes),
     :msgpack => (MsgPack.pack, MsgPack.unpack)
 )
@@ -226,7 +226,7 @@ function Base.done{K, V}(store::KeyStore{K, V}, state)
     pair === nothing
 end
 
-Base.iteratorsize{K, V}(::Type{KeyStore{K, V}}) = SizeUnknown()
+Base.iteratorsize{K, V}(::Type{KeyStore{K, V}}) = Base.SizeUnknown()
 
 # notifications
 function watch{K, V}(store::KeyStore{K, V}, channel_id::AbstractString, address::AbstractString)
