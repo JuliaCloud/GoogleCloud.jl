@@ -6,6 +6,8 @@ module api
 export APIRoot, APIResource, APIMethod, set_session!, get_session, iserror
 
 import Base: show, print, getindex
+
+using Compat
 import Requests
 import URIParser
 import Libz
@@ -206,7 +208,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     params...
 )
     # check if data provided when not expected
-    if (data !== nothing) $ in(method.verb, (:POST, :UPDATE, :PATCH, :PUT))
+    if xor((data !== nothing), in(method.verb, (:POST, :UPDATE, :PATCH, :PUT)))
         data = nothing
     end
     if length(path_args) != length(path_tokens(method.path))

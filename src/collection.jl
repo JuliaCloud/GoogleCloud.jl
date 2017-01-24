@@ -5,17 +5,18 @@ export
 
 using Base.Dates
 
+using Compat
+import JSON
+import MsgPack
+
 using ..session
 using ..api
 using ..api._storage
 
-import JSON
-import MsgPack
-
 function _serialize_bytes(x)
     io = IOBuffer()
     serialize(io, x)
-    takebuf_array(io)
+    take!(io)
 end
 _deserialize_bytes(x) = deserialize(IOBuffer(x))
 
