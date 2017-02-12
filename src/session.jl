@@ -157,7 +157,7 @@ function authorize(session::GoogleSession; cache=true)
     if statuscode(res) != 200
         session.authorization = typeof(session.authorization)()
         session.expiry = 0
-        throw(SessionError("Unable to obtain authorization: $(readall(res))"))
+        throw(SessionError("Unable to obtain authorization: $(readstring(res))"))
     end
 
     authorization = Requests.json(res; dicttype=Dict{Symbol, Any})

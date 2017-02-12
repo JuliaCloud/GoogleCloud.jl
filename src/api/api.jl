@@ -8,7 +8,7 @@ export APIRoot, APIResource, APIMethod, set_session!, get_session, iserror
 import Base: show, print, getindex
 
 using Compat
-import Requests
+using Requests
 import URIParser
 import Libz
 import JSON
@@ -267,7 +267,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         result = Requests.json(res; dicttype=Dict{Symbol, Any})
         raw ? result : method.transform(result, resource.transform)
     else
-        result, status = Requests.readall(res), Requests.statuscode(res)
+        result, status = readstring(res), statuscode(res)
         status == 200 ? result : Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
     end
 end
