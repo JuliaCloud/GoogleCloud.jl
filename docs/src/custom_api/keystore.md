@@ -26,17 +26,15 @@ Initialize the key-value store. In this case our store uses the default options,
 
 ```julia
 kv_sync = KeyStore{Int, Int}(
-    "kvtest";                                  # Key-value store name. Created if it doesn't already exist.
-    session    = session,
-    val_writer = serialize_to_uint8_vector,    # Function for serializing data before writing to the store
-    val_reader = deserialize_from_vector,      # Function for deserializing data before reading from the store 
-    use_remote = true,                         # Defaults to true. Commit every write to the remote store.
-    use_cache  = true,                         # Defaults to true. Commit every write to the local store.
-    reset      = false                         # Defaults to false. Empty the bucket if it exists.
+    "kvtest",                                  # Key-value store name. Created if it doesn't already exist.
+    session;
+    location    = "US",
+    empty       = false,                        # Defaults to false. Empty the bucket if it exists.
+    gzip        = true,
+    key_format  = K <: String ? :string : :json # the formating function of key
+    val_format  = V <: String ? :string : :json # the formating function of value
 )
 ```
-
-Note that `use_remote` and `use_cache` can't both be `false`. An error is raised if this occurs.
 
 Run some basic get/set methods, verifying their effects along the way.
 
