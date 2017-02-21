@@ -78,7 +78,7 @@ function connect!(store::KeyStore; location::AbstractString="US", empty::Bool=fa
                 error("Unable to create bucket: $(response[:error][:message])")
             end
         elseif code == 403  # forbidden (not available)
-            error("Bucket name already taken: $bucket_name")
+            error("Authorization failure or bucket name already taken: $(response[:error][:message])")
         else
             error("Error checking bucket: $(response[:error][:message])")
         end
