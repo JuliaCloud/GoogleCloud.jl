@@ -7,6 +7,7 @@ export GoogleSession, authorize
 
 import Base: string, print, show
 using Base.Dates
+
 using Requests
 import JSON
 import MbedTLS
@@ -131,12 +132,11 @@ function JWS(credentials::GoogleCredentials, claimset::JWTClaimSet, header::JWTH
 end
 
 """
-    authorize(session[; cache=true)
+    authorize(session; cache=true)
 
 Get OAuth 2.0 authorisation token from Google.
 
-If `cache` set to `true`, get a new token only if the existing token has not
-expired.
+If `cache` set to `true`, get a new token only if the existing token has expired.
 """
 function authorize(session::GoogleSession; cache=true)
     # don't get a new token if a non-expired one exists
@@ -157,7 +157,7 @@ function authorize(session::GoogleSession; cache=true)
     if statuscode(res) != 200
         session.authorization = typeof(session.authorization)()
         session.expiry = 0
-        throw(SessionError("Unable to obtain authorization: $(readall(res))"))
+        throw(SessionError("Unable to obtain authorization: $(readstring(res))"))
     end
 
     authorization = Requests.json(res; dicttype=Dict{Symbol, Any})

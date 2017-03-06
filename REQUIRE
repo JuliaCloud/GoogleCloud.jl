@@ -1,7 +1,9 @@
 julia 0.5.0
 
+Compat
 Requests
 MbedTLS
 JSON
+MsgPack
 URIParser
 Blosc

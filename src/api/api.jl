@@ -6,7 +6,10 @@ module api
 export APIRoot, APIResource, APIMethod, set_session!, get_session, iserror
 
 import Base: show, print, getindex
-import Requests
+using Base.Dates
+
+using Compat
+using Requests
 import URIParser
 import Libz
 import JSON
@@ -201,12 +204,14 @@ Execute a method against the provided path arguments.
 Optionally provide parameters and data (with optional MIME content-type).
 """
 function execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::AbstractString...;
-    data::Union{AbstractString, Associative, Vector{UInt8}, Void}=nothing, gzip::Bool=false, content_type::AbstractString="application/json",
+    data::Union{AbstractString, Associative, Vector{UInt8}, Void}=nothing,
+    gzip::Bool=false, content_type::AbstractString="application/json",
     debug::Bool=false, raw::Bool=false,
+    max_backoff::TimePeriod=Second(64), max_attempts::Int64=10,
     params...
 )
     # check if data provided when not expected
-    if (data !== nothing) $ in(method.verb, (:POST, :UPDATE, :PATCH, :PUT))
+    if xor((data !== nothing), in(method.verb, (:POST, :UPDATE, :PATCH, :PUT)))
         data = nothing
     end
     if length(path_args) != length(path_tokens(method.path))
@@ -244,18 +249,37 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         end
     end
 
-    res = Requests.do_request(
-        URIParser.URI(path_replace(method.path, path_args)), string(method.verb);
-        query=params, data=data, headers=headers,
-        compressed=true
-    )
+    # attempt request until exceeding maximum attempts, backing off exponentially
+    res = nothing
+    max_backoff = Millisecond(max_backoff)
+    for attempt = 1:max(max_attempts, 1)
+        res = Requests.do_request(
+            URIParser.URI(path_replace(method.path, path_args)), string(method.verb);
+            query=params, data=data, headers=headers,
+            compressed=true
+        )
 
-    if debug
-        info("Request URL: $(get(res.request).uri)")
-        info("Request Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(get(res.request).headers))), "\n"))
-        info("Request Data:\n  " * base64encode(get(res.request).data))
-        info("Response Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(res.headers))), "\n"))
-        info("Response Data:\n  " * base64encode(res.data))
+        if debug
+            info("Attempt: $attempt")
+            info("Request URL: $(get(res.request).uri)")
+            info("Request Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(get(res.request).headers))), "\n"))
+            info("Request Data:\n  " * base64encode(get(res.request).data))
+            info("Response Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(res.headers))), "\n"))
+            info("Response Data:\n  " * base64encode(res.data))
+            info("Status: ", statuscode(res))
+        end
+        # https://cloud.google.com/storage/docs/exponential-backoff
+        if (div(statuscode(res), 100) == 5) || (statuscode(res) == 429)
+            if attempt < max_attempts
+                backoff = min(Millisecond(2 ^ attempt + floor(rand() * 1000)), max_backoff)
+                warn("Unable to complete request: Retrying ($attempt/$max_attempts) in $backoff")
+                sleep(backoff / Millisecond(Second(1)))
+            else
+                warn("Maximum attempts reached")
+            end
+        else
+            break
+        end
     end
 
     # if response is JSON, parse and return. otherwise, just dump data
@@ -263,9 +287,9 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         nothing
     elseif contains(res.headers["Content-Type"], "application/json")
         result = Requests.json(res; dicttype=Dict{Symbol, Any})
-        raw ? result : method.transform(result, resource.transform)
+        raw || (statuscode(res) >= 400) ? result : method.transform(result, resource.transform)
     else
-        result, status = Requests.readall(res), Requests.statuscode(res)
+        result, status = readstring(res), statuscode(res)
         status == 200 ? result : Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
     end
 end
