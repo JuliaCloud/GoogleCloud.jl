@@ -9,7 +9,7 @@ export
     GoogleCredentials, GoogleSession, authorize,
     set_session!, get_session
 export
-    iam, storage, compute, container, pubsub, logging
+    iam, storage, compute, container, pubsub, logging, datastore
 export
     KeyStore, commit!, fetch!, sync!, clearcache!, clearpending!, destroy!, connect!, watch, unwatch
 
@@ -35,6 +35,7 @@ import .api:
     _compute.compute,
     _container.container,
     _pubsub.pubsub,
-    _logging.logging
+    _logging.logging,
+    _datastore.datastore
 
 end

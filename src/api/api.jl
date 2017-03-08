@@ -138,7 +138,7 @@ type APIRoot
                 if isempty(method.path)
                     method.path = resource.path
                 elseif !isurl(method.path)
-                    method.path = "$(resource.path)/$(method.path)"
+                    method.path = startswith(method.path, ":") ? "$(resource.path)$(method.path)" : "$(resource.path)/$(method.path)"
                 end
             end
         end
@@ -300,5 +300,6 @@ include("compute.jl")
 include("container.jl")
 include("pubsub.jl")
 include("logging.jl")
+include("datastore.jl")
 
 end
