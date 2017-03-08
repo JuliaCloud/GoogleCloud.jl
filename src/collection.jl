@@ -20,10 +20,6 @@ function _serialize_bytes(x)
 end
 _deserialize_bytes(x) = deserialize(IOBuffer(x))
 
-function _reinterprete(x)
-    reinterprete(UInt8, x[:])
-end
-
 # key serialiser/deserialiser pairs
 key_format_map = Dict{Symbol, Tuple{Function, Function}}(
     :json => (JSON.json, JSON.parse),
