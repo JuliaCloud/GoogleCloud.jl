@@ -275,7 +275,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
                 warn("Unable to complete request: Retrying ($attempt/$max_attempts) in $backoff")
                 sleep(backoff / Millisecond(Second(1)))
             else
-                warn("Maximum attempts reached")
+                warn("Unable to complete request: Stopping ($attempt/$max_attempts)")
             end
         else
             break

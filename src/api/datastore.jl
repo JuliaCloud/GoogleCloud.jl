@@ -3,10 +3,26 @@ Google Cloud Datastore API
 """
 module _datastore
 
-export datastore
+export datastore, DatastoreValueType
 
 using ..api
 using ...root
+
+@enum(DatastoreValueType,
+    nullValue,
+    booleanValue,
+    integerValue,
+    doubleValue,
+    timestampValue,
+    keyValue,
+    stringValue,
+    blobValue,
+    geoPointValue,
+    entityValue,
+    arrayValue
+)
+value_type_map = Dict(string(x) => x for x in instances(DatastoreValueType))
+Base.convert(::Type{DatastoreValueType}, x::AbstractString) = haskey(value_type_map, x) ? value_type_map[x] : Base.error("Unknown Datastore value type")
 
 """
 Google Cloud Datastore API root.
