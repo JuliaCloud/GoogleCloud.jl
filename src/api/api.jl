@@ -210,10 +210,6 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     max_backoff::TimePeriod=Second(64), max_attempts::Int64=10,
     params...
 )
-    # check if data provided when not expected
-    if xor((data !== nothing), in(method.verb, (:POST, :UPDATE, :PATCH, :PUT)))
-        data = nothing
-    end
     if length(path_args) != length(path_tokens(method.path))
         throw(APIError("Number of path arguments do not match"))
     end
@@ -225,20 +221,27 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     )
     params = Dict(params)
 
+    # check if data provided when not expected
+    if xor((data !== nothing), in(method.verb, (:POST, :UPDATE, :PATCH, :PUT)))
+        data = nothing
+        content_type = ""
+        headers["Content-Length"] = "0"
+    end
+
     # serialise data to JSON if necessary
     if data !== nothing
         if !isempty(content_type)
             headers["Content-Type"] = content_type
         end
-        if content_type == "application/json" && !isa(data, Union{AbstractString, Vector{UInt8}})
+        if isa(data, Associative) || content_type == "application/json"
             data = JSON.json(data)
+        elseif isempty(data)
+            headers["Content-Length"] = "0"
         end
         if gzip
             params[:contentEncoding] = "gzip"
             data = read(Vector{UInt8}(data) |> Libz.ZlibDeflateInputStream)
         end
-    else
-        headers["Content-Length"] = "0"
     end
 
     # merge in default parameters and evaluate any expressions
@@ -283,11 +286,13 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     end
 
     # if response is JSON, parse and return. otherwise, just dump data
-    if get(res.headers, "Content-Length", "") == "0"
-        nothing
-    elseif contains(res.headers["Content-Type"], "application/json")
-        result = Requests.json(res; dicttype=Dict{Symbol, Any})
-        raw || (statuscode(res) >= 400) ? result : method.transform(result, resource.transform)
+    if contains(res.headers["Content-Type"], "application/json")
+        if get(res.headers, "Content-Length", "") == "0"
+            nothing
+        else
+            result = Requests.json(res; dicttype=Dict{Symbol, Any})
+            raw || (statuscode(res) >= 400) ? result : method.transform(result, resource.transform)
+        end
     else
         result, status = readstring(res), statuscode(res)
         status == 200 ? result : Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
