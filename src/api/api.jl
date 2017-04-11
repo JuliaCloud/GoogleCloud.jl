@@ -256,14 +256,21 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     res = nothing
     max_backoff = Millisecond(max_backoff)
     for attempt = 1:max(max_attempts, 1)
-        res = Requests.do_request(
-            URIParser.URI(path_replace(method.path, path_args)), string(method.verb);
-            query=params, data=data, headers=headers,
-            compressed=true
-        )
-
         if debug
             info("Attempt: $attempt")
+        end
+        res = try
+            Requests.do_request(
+                URIParser.URI(path_replace(method.path, path_args)), string(method.verb);
+                query=params, data=data, headers=headers, compressed=true
+            )
+        catch e
+            if !(isa(e, UVError) && in(e.code, [Base.UV_ECONNREFUSED, Base.UV_ETIMEDOUT]))
+                throw(e)
+            end
+        end
+
+        if debug && (res !== nothing)
             info("Request URL: $(get(res.request).uri)")
             info("Request Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(get(res.request).headers))), "\n"))
             info("Request Data:\n  " * base64encode(get(res.request).data))
@@ -271,8 +278,9 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
             info("Response Data:\n  " * base64encode(res.data))
             info("Status: ", statuscode(res))
         end
+
         # https://cloud.google.com/storage/docs/exponential-backoff
-        if (div(statuscode(res), 100) == 5) || (statuscode(res) == 429)
+        if (res === nothing) || (div(statuscode(res), 100) == 5) || (statuscode(res) == 429)
             if attempt < max_attempts
                 backoff = min(Millisecond(2 ^ attempt + floor(rand() * 1000)), max_backoff)
                 warn("Unable to complete request: Retrying ($attempt/$max_attempts) in $backoff")
