@@ -265,7 +265,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
                 query=params, data=data, headers=headers, compressed=true
             )
         catch e
-            if !(isa(e, UVError) && in(e.code, [Base.UV_ECONNREFUSED, Base.UV_ETIMEDOUT]))
+            if !(isa(e, Base.UVError) && in(e.code, [Base.UV_ECONNREFUSED, Base.UV_ETIMEDOUT]))
                 throw(e)
             end
         end
