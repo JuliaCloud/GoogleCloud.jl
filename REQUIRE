@@ -6,3 +6,4 @@ MbedTLS
 JSON
 MsgPack
 URIParser
+Blosc

@@ -20,6 +20,7 @@ include("credentials.jl")
 include("session.jl")
 include("api/api.jl")
 include("collection.jl")
+include("utils/utils.jl")
 
 using .error
 using .credentials
