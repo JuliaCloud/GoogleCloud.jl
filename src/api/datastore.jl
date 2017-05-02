@@ -39,7 +39,7 @@ module types
         @eval export $(Symbol(s))
     end
 
-    value_types = Dict{DataType, ValueType}(
+    value_types = Dict{Type, ValueType}(
         Bool => booleanValue,
         Integer => integerValue,
         AbstractFloat => doubleValue,

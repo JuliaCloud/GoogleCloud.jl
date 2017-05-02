@@ -7,6 +7,7 @@ export GoogleCredentials
 
 import Base: show, print
 import JSON
+import MbedTLS
 
 using ..error
 
@@ -20,13 +21,33 @@ type GoogleCredentials
     account_type::String
     project_id::String
     private_key_id::String
-    private_key::String
+    private_key::MbedTLS.PKContext
     client_email::String
     client_id::String
     auth_uri::String
     token_uri::String
     auth_provider_x509_cert_url::String
     client_x509_cert_url::String
+    function GoogleCredentials(
+        account_type::AbstractString,
+        project_id::AbstractString,
+        private_key_id::AbstractString,
+        private_key::AbstractString,
+        client_email::AbstractString,
+        client_id::AbstractString,
+        auth_uri::AbstractString,
+        token_uri::AbstractString,
+        auth_provider_x509_cert_url::AbstractString,
+        client_x509_cert_url::AbstractString
+    )
+        ctx = MbedTLS.PKContext()
+        MbedTLS.parse_key!(ctx, private_key)
+        new(
+            account_type, project_id, private_key_id, ctx,
+            client_email, client_id, auth_uri, token_uri,
+            auth_provider_x509_cert_url, client_x509_cert_url,
+        )
+    end
 end
 
 """

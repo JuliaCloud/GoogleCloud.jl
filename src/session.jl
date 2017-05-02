@@ -21,24 +21,9 @@ using ..root
 
 Sign message using private key with RSASSA-PKCS1-V1_5-SIGN algorithm.
 """
-function SHA256withRSA(message, key)
-    # load up the key context
-    ctx = MbedTLS.PKContext()
-    #MbedTLS.parse_key!(ctx, key)
-    ccall((:mbedtls_pk_parse_key, MbedTLS.MBED_CRYPTO), Cint,
-        (Ptr{Void}, Ptr{Cuchar}, Csize_t, Ptr{Cuchar}, Csize_t),
-        ctx.data, key, sizeof(key) + 1, C_NULL, 0
-    )
-
-    # sign the message digest
-    output = Vector{UInt8}(Int64(ceil(MbedTLS.bitlength(ctx) / 8)))
-    MbedTLS.sign!(ctx, MbedTLS.MD_SHA256,
-        MbedTLS.digest(MbedTLS.MD_SHA256, message),
-        output, MbedTLS.MersenneTwister(0)
-    )
-
-    String(output)
-end
+SHA256withRSA(message, key::MbedTLS.PKContext) = MbedTLS.sign(key, MbedTLS.MD_SHA256,
+    MbedTLS.digest(MbedTLS.MD_SHA256, message), MbedTLS.MersenneTwister(0)
+)
 
 """
 GoogleSession(...)
@@ -63,7 +48,7 @@ type GoogleSession
     """
     function GoogleSession(credentials::GoogleCredentials, scopes::Vector{String})
         scopes = [isurl(scope) ? scope : "$SCOPE_ROOT/$scope" for scope in scopes]
-        new(credentials, scopes, Dict{String, String}(), 0)
+        new(credentials, scopes, Dict{String, String}(), DateTime())
     end
 end
 GoogleSession(filename::AbstractString, args...) = GoogleSession(GoogleCredentials(filename), args...)
@@ -80,7 +65,7 @@ show(io::IO, x::GoogleSession) = print(io, x)
 
 Convert date-time into unix seconds.
 """
-unixseconds(x::DateTime) = datetime2unix(trunc(x, Second))
+unixseconds(x::DateTime) = trunc(Int64, datetime2unix(x))
 
 """
     JWTHeader
@@ -113,8 +98,8 @@ end
 function string(x::JWTClaimSet)
     base64encode(JSON.json(Dict(
         :iss => x.issuer, :scope => join(x.scopes, " "), :aud => AUD_ROOT,
-        :iat => Int64(unixseconds(x.assertion)),
-        :exp => Int64(unixseconds(x.expiry))
+        :iat => unixseconds(x.assertion),
+        :exp => unixseconds(x.expiry)
     )))
 end
 print(io::IO, x::JWTClaimSet) = print(io, string(x))
