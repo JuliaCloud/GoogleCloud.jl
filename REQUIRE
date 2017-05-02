@@ -4,5 +4,6 @@ Compat 0.17.0
 Requests
 MbedTLS
 JSON
+Libz
 MsgPack
 URIParser
