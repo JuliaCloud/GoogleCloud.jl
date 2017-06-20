@@ -51,7 +51,7 @@ immutable KeyStore{K, V} <: Associative{K, V}
         location::AbstractString="US", empty::Bool=false, gzip::Bool=true,
         key_format::Union{Symbol, AbstractString}=K <: String ? :string : :json,
         val_format::Union{Symbol, AbstractString}=V <: String ? :string : :json
-    )
+    )# where {K, V}
         key_encoder, key_decoder = try key_format_map[Symbol(key_format)] catch
             error("Unknown key format: $key_format")
         end

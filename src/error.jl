@@ -7,10 +7,12 @@ export CredentialError, SessionError, APIError
 
 import Base: showerror
 
+using Compat
+
 """
 Base error type.
 """
-abstract Error <: Exception
+@compat abstract type Error <: Exception end
 
 showerror(io::IO, e::Error) = print(io, "$(typeof(e)): $(e.message)")
 

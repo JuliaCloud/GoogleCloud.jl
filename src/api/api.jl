@@ -210,10 +210,6 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     max_backoff::TimePeriod=Second(64), max_attempts::Int64=10,
     params...
 )
-    # check if data provided when not expected
-    if xor((data !== nothing), in(method.verb, (:POST, :UPDATE, :PATCH, :PUT)))
-        data = nothing
-    end
     if length(path_args) != length(path_tokens(method.path))
         throw(APIError("Number of path arguments do not match"))
     end
@@ -225,20 +221,27 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     )
     params = Dict(params)
 
+    # check if data provided when not expected
+    if xor((data !== nothing), in(method.verb, (:POST, :UPDATE, :PATCH, :PUT)))
+        data = nothing
+        content_type = ""
+        headers["Content-Length"] = "0"
+    end
+
     # serialise data to JSON if necessary
     if data !== nothing
         if !isempty(content_type)
             headers["Content-Type"] = content_type
         end
-        if content_type == "application/json" && !isa(data, Union{AbstractString, Vector{UInt8}})
+        if isa(data, Associative) || content_type == "application/json"
             data = JSON.json(data)
+        elseif isempty(data)
+            headers["Content-Length"] = "0"
         end
         if gzip
             params[:contentEncoding] = "gzip"
             data = read(Vector{UInt8}(data) |> Libz.ZlibDeflateInputStream)
         end
-    else
-        headers["Content-Length"] = "0"
     end
 
     # merge in default parameters and evaluate any expressions
@@ -253,14 +256,21 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     res = nothing
     max_backoff = Millisecond(max_backoff)
     for attempt = 1:max(max_attempts, 1)
-        res = Requests.do_request(
-            URIParser.URI(path_replace(method.path, path_args)), string(method.verb);
-            query=params, data=data, headers=headers,
-            compressed=true
-        )
-
         if debug
             info("Attempt: $attempt")
+        end
+        res = try
+            Requests.do_request(
+                URIParser.URI(path_replace(method.path, path_args)), string(method.verb);
+                query=params, data=data, headers=headers, compressed=true
+            )
+        catch e
+            if !(isa(e, Base.UVError) && in(e.code, [Base.UV_ECONNRESET, Base.UV_ECONNREFUSED, Base.UV_ECONNABORTED, Base.UV_EPIPE, Base.UV_ETIMEDOUT]))
+                throw(e)
+            end
+        end
+
+        if debug && (res !== nothing)
             info("Request URL: $(get(res.request).uri)")
             info("Request Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(get(res.request).headers))), "\n"))
             info("Request Data:\n  " * base64encode(get(res.request).data))
@@ -268,14 +278,15 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
             info("Response Data:\n  " * base64encode(res.data))
             info("Status: ", statuscode(res))
         end
+
         # https://cloud.google.com/storage/docs/exponential-backoff
-        if (div(statuscode(res), 100) == 5) || (statuscode(res) == 429)
+        if (res === nothing) || (div(statuscode(res), 100) == 5) || (statuscode(res) == 429)
             if attempt < max_attempts
                 backoff = min(Millisecond(2 ^ attempt + floor(rand() * 1000)), max_backoff)
                 warn("Unable to complete request: Retrying ($attempt/$max_attempts) in $backoff")
                 sleep(backoff / Millisecond(Second(1)))
             else
-                warn("Maximum attempts reached")
+                warn("Unable to complete request: Stopping ($attempt/$max_attempts)")
             end
         else
             break
@@ -283,11 +294,13 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     end
 
     # if response is JSON, parse and return. otherwise, just dump data
-    if get(res.headers, "Content-Length", "") == "0"
-        nothing
-    elseif contains(res.headers["Content-Type"], "application/json")
-        result = Requests.json(res; dicttype=Dict{Symbol, Any})
-        raw || (statuscode(res) >= 400) ? result : method.transform(result, resource.transform)
+    if contains(res.headers["Content-Type"], "application/json")
+        if get(res.headers, "Content-Length", "") == "0"
+            nothing
+        else
+            result = Requests.json(res; dicttype=Dict{Symbol, Any})
+            raw || (statuscode(res) >= 400) ? result : method.transform(result, resource.transform)
+        end
     else
         result, status = readstring(res), statuscode(res)
         status == 200 ? result : Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
