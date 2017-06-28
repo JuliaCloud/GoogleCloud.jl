@@ -282,7 +282,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         # https://cloud.google.com/storage/docs/exponential-backoff
         if (res === nothing) || (div(statuscode(res), 100) == 5) || (statuscode(res) == 429)
             if attempt < max_attempts
-                backoff = min(Millisecond(2 ^ attempt + floor(rand() * 1000)), max_backoff)
+                backoff = min(Millisecond(floor(Int, 1000 * (2 ^ (attempt - 1) + rand()))), max_backoff)
                 warn("Unable to complete request: Retrying ($attempt/$max_attempts) in $backoff")
                 sleep(backoff / Millisecond(Second(1)))
             else
