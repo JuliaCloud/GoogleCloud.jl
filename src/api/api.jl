@@ -246,9 +246,10 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
 
     # merge in default parameters and evaluate any expressions
     params = merge!(copy(method.default_params), Dict(params))
+    extra = Dict(:project_id => session.credentials.project_id)
     for (key, val) in params
-        if isa(val, Expr)
-            params[key] = eval(:((credentials, data) -> $val))(session.credentials, data)
+        if isa(val, Symbol)
+            params[key] = extra[val]
         end
     end
 

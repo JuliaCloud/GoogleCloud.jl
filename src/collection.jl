@@ -46,18 +46,18 @@ immutable KeyStore{K, V} <: Associative{K, V}
     writer::Function
     gzip::Bool
     channel::Dict{Symbol, Any}
-    function KeyStore(bucket_name::AbstractString, session::GoogleSession=get_session(storage);
+    function KeyStore{K, V}(bucket_name::AbstractString, session::GoogleSession=get_session(storage);
         location::AbstractString="US", empty::Bool=false, gzip::Bool=true,
         key_format::Union{Symbol, AbstractString}=K <: String ? :string : :json,
         val_format::Union{Symbol, AbstractString}=V <: String ? :string : :json
-    )# where {K, V}
+    ) where {K, V}
         key_encoder, key_decoder = try key_format_map[Symbol(key_format)] catch
             error("Unknown key format: $key_format")
         end
         writer, reader = try val_format_map[Symbol(val_format)] catch
             error("Unknown value format: $val_format")
         end
-        store = new(bucket_name, session,
+        store = new{K, V}(bucket_name, session,
             (x) -> convert(K, key_decoder(x)), key_encoder,
             reader, writer,
             gzip, Dict{Symbol, Any}()

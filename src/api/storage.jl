@@ -22,10 +22,10 @@ storage = APIRoot(
         delete=APIMethod(:DELETE, "{bucket}", "Permanently deletes an empty bucket."),
         get=APIMethod(:GET, "{bucket}", "Returns metadata for the specified bucket."),
         insert=APIMethod(:POST, "", "Creates a new bucket.",
-            Dict(:project => :(credentials.project_id))
+            Dict(:project => :project_id)
         ),
         list=APIMethod(:GET, "", "Retrieves a list of buckets for a given project.",
-            Dict(:project => :(credentials.project_id));
+            Dict(:project => :project_id);
             transform=(x, t) -> map(t, get(x, :items, []))
         ),
         patch=APIMethod(:PATCH, "{bucket}", "Updates a bucket. This method supports patch semantics."),
