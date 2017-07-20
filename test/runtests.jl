@@ -1,3 +1,5 @@
 using GoogleCloud
 using Base.Test
-@test 1 == 1
+
+# this test won't work due to lack of json file for authorization
+# include("storage.jl")
