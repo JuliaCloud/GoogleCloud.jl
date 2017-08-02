@@ -3,12 +3,10 @@ General framework for representing Google JSON APIs.
 """
 module api
 
-export APIRoot, APIResource, APIMethod, set_session!, get_session, iserror
+export APIRoot, APIResource, APIMethod, set_session!, iserror
 
-import Base: show, print, getindex
 using Base.Dates
 
-using Compat
 using Requests
 import MbedTLS
 import URIParser
@@ -58,24 +56,23 @@ iserror(x::Any) = isa(x, Dict{Symbol, Any}) && haskey(x, :error)
 
 Maps a method in the API to an HTTP verb and path.
 """
-type APIMethod
+struct APIMethod
     verb::Symbol
     path::String
     description::String
     default_params::Dict{Symbol, Any}
     transform::Function
     function APIMethod(verb::Symbol, path::AbstractString, description::AbstractString,
-        default_params::Dict=Dict{Symbol, Any}();
-        transform=(x, t) -> x
-    )
+                       default_params::Associative{Symbol}=Dict{Symbol, Any}();
+                       transform=(x, t) -> x)
         new(verb, path, description, default_params, transform)
     end
 end
-function print(io::IO, x::APIMethod)
+function Base.print(io::IO, x::APIMethod)
     println(io, "$(x.verb): $(x.path)")
     Base.Markdown.print_wrapped(io, x.description)
 end
-show(io::IO, x::APIMethod) = print(io, x)
+Base.show(io::IO, x::APIMethod) = print(io, x)
 
 """
     APIResource(path, methods)
@@ -83,7 +80,7 @@ show(io::IO, x::APIMethod) = print(io, x)
 Represents a resource in the API, typically rooted at a specific point in the
 REST hierarchy.
 """
-type APIResource
+struct APIResource
     path::String
     methods::Dict{Symbol, APIMethod}
     transform::Union{Function, DataType}
@@ -91,36 +88,50 @@ type APIResource
         if isempty(methods)
             throw(APIError("Resource must have at least one method."))
         end
-        new(path, Dict{Symbol, APIMethod}(methods), transform)
+        methods = Dict(methods)
+        # build out non-absolute paths
+        if isurl(path)
+            for (name, method) in methods
+                if isempty(method.path)
+                    method_path = path
+                elseif !isurl(method.path)
+                    method_path = startswith(method.path, ":") ? "$(path)$(method.path)" : "$(path)/$(method.path)"
+                else
+                    continue
+                end
+                methods[name] = APIMethod(method.verb, method_path, method.description, method.default_params; transform=method.transform)
+            end
+        end
+        new(path, methods, transform)
     end
 end
-function print(io::IO, x::APIResource)
+function Base.print(io::IO, x::APIResource)
     println(io, x.path, "\n")
     for (name, method) in sort(collect(x.methods), by=(x) -> x[1])
+        println(io)
         println(io, name)
         println(io, repeat("-", length(string(name))))
-        println(io, method)
+        print(io, method)
     end
 end
-show(io::IO, x::APIResource) = print(io, x)
+Base.show(io::IO, x::APIResource) = print(io, x)
 
 """
     APIRoot(...)
 
 Represent a Google JSON API containing resources, accessible via scopes.
 """
-type APIRoot
+struct APIRoot
     path::String
     scopes::Dict{String, String}
     resources::Dict{Symbol, APIResource}
-    default_session::Nullable{GoogleSession}
     """
         APIRoot(path, scopes; resources...)
 
     An API rooted at `path` with specified OAuth 2.0 access scopes and
     resources.
     """
-    function APIRoot{K <: AbstractString, V <: AbstractString}(path::AbstractString, scopes::Dict{K, V}; resources...)
+    function APIRoot(path::AbstractString, scopes::Associative{<: AbstractString, <: AbstractString}; resources...)
         if !isurl(path)
             throw(APIError("API root must be a valid URL."))
         end
@@ -129,33 +140,30 @@ type APIRoot
         end
         resources = Dict(resources)
         # build out non-absolute paths
-        for resource in values(resources)
+        for (name, resource) in resources
             if isempty(resource.path)
-                resource.path = path
+                resource_path = path
             elseif !isurl(resource.path)
-                resource.path = "$(path)/$(resource.path)"
+                resource_path = "$(path)/$(resource.path)"
+            else
+                continue
             end
-            for method in values(resource.methods)
-                if isempty(method.path)
-                    method.path = resource.path
-                elseif !isurl(method.path)
-                    method.path = startswith(method.path, ":") ? "$(resource.path)$(method.path)" : "$(resource.path)/$(method.path)"
-                end
-            end
+            resources[name] = APIResource(resource_path, resource.transform; resource.methods...)
         end
-        new(path, scopes, resources, nothing)
+        new(path, scopes, resources)
     end
 end
-function print(io::IO, x::APIRoot)
+function Base.print(io::IO, x::APIRoot)
     println(io, x.path, "\n")
     for (name, resource) in sort(collect(x.resources), by=(x) -> x[1])
+        println(io)
         println(io, name)
         println(io, repeat("=", length(string(name))))
         println(io, resource)
         println(io, repeat("-", 79))
     end
 end
-show(io::IO, x::APIRoot) = print(io, x)
+Base.show(io::IO, x::APIRoot) = print(io, x)
 
 """
     set_session!(api, session)
@@ -164,18 +172,8 @@ Set the default session for a specific API. Set session to `nothing` to
 forget session.
 """
 function set_session!(api::APIRoot, session::Union{GoogleSession, Void})
-    api.default_session = session
+    _default_session[api] = session
     nothing
-end
-
-"""
-    get_session(api)
-
-Get the default session (if any) for a specific API. Session is `nothing` if
-not set.
-"""
-function get_session(api::APIRoot)
-    get(api.default_session, nothing)
 end
 
 function (api::APIRoot)(resource_name::Symbol)
@@ -190,7 +188,7 @@ function (api::APIRoot)(resource_name::Symbol, method_name::Symbol, args...; kwa
         throw(APIError("Unknown method for resource $resource_name: $method_name"))
     end
     kwargs = Dict(kwargs)
-    session = pop!(kwargs, :session, get_session(api))
+    session = pop!(kwargs, :session, get(_default_session, api, nothing))
     if session === nothing
         throw(SessionError("Cannot use API without a session."))
     end
@@ -310,6 +308,8 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         status == 200 ? result : Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
     end
 end
+
+const _default_session = Dict{APIRoot, GoogleSession}()
 
 include("iam.jl")
 include("storage.jl")

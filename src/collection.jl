@@ -5,7 +5,6 @@ export
 
 using Base.Dates
 
-using Compat
 import JSON
 import MsgPack
 
@@ -30,6 +29,7 @@ key_format_map = Dict{Symbol, Tuple{Function, Function}}(
 val_format_map = Dict{Symbol, Tuple{Function, Function}}(
     :json => (JSON.json, JSON.parse),
     :string => (string, identity),
+    :data => (identity, identity),
     :julia => (_serialize_bytes, _deserialize_bytes),
     :msgpack => (MsgPack.pack, MsgPack.unpack)
 )

@@ -6,7 +6,7 @@ Google Cloud APIs
 module GoogleCloud
 
 export
-    GoogleCredentials, GoogleSession, authorize,
+    JSONCredentials, MetadataCredentials, GoogleSession, authorize,
     set_session!, get_session
 export
     iam, storage, compute, container, pubsub, logging, datastore

@@ -54,7 +54,7 @@ using GoogleCloud
 Load the service account credentials obtained from Google:
 
 ```julia
-creds = GoogleCredentials(expanduser("~/credentials.json"))
+creds = JSONCredentials(expanduser("~/credentials.json"))
 ```
 
 Now, create a session with the credentials, requesting any required scopes:

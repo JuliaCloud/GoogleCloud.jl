@@ -171,6 +171,7 @@ compute = APIRoot(
         setMachineType=APIMethod(:POST, "{instance}/setMachineType", "Changes the machine type for a stopped instance to the machine type specified in the request."),
         setMetadata=APIMethod(:POST, "{instance}/setMetadata", "Sets metadata for the specified instance to the data included in the request."),
         setScheduling=APIMethod(:POST, "{instance}/setScheduling", "Sets an instance's scheduling options."),
+        setServiceAccount=APIMethod(:POST, "{instance}/setServiceAccount", "Sets the service account on the instance."),
         setTags=APIMethod(:POST, "{instance}/setTags", "Sets tags for the specified instance to the data included in the request."),
         start=APIMethod(:POST, "{instance}/start", "Starts an instance that was stopped using the using the instances().stop method. For more information, see Restart an instance."),
         startWithEncryptionKey=APIMethod(:POST, "{instance}/startWithEncryptionKey", "Starts an instance that was stopped using the using the instances().stop method. For more information, see Restart an instance."),

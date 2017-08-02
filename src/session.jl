@@ -33,11 +33,11 @@ OAuth 2.0 session for Google using provided credentials.
 Caches authorisation tokens up to expiry.
 
 ```julia
-sess = GoogleSession(GoogleCredentials(expanduser("~/auth.json")), ["devstorage.full_control"])
+sess = GoogleSession(JSONCredentials(expanduser("~/auth.json")), ["devstorage.full_control"])
 ```
 """
-type GoogleSession
-    credentials::GoogleCredentials
+mutable struct GoogleSession{T <: Credentials}
+    credentials::T
     scopes::Vector{String}
     authorization::Dict{Symbol, Any}
     expiry::DateTime
@@ -46,12 +46,21 @@ type GoogleSession
 
     Set up session with credentials and OAuth scopes.
     """
-    function GoogleSession(credentials::GoogleCredentials, scopes::Vector{String})
+    function GoogleSession(credentials::T, scopes::AbstractVector{<: AbstractString}) where {T <: Credentials}
         scopes = [isurl(scope) ? scope : "$SCOPE_ROOT/$scope" for scope in scopes]
-        new(credentials, scopes, Dict{String, String}(), DateTime())
+        new{T}(credentials, scopes, Dict{String, String}(), DateTime())
     end
 end
-GoogleSession(filename::AbstractString, args...) = GoogleSession(GoogleCredentials(filename), args...)
+function GoogleSession(credentials::AbstractString=get(ENV, "GOOGLE_APPLICATION_CREDENTIALS", ""),
+                       scopes::AbstractVector{<: AbstractString}=String[])
+    if isempty(credentials) || isurl(credentials)
+        credentials = MetadataCredentials(credentials)
+        scopes = credentials.scopes[:]
+    else
+        credentials = JSONCredentials(credentials)
+    end
+    GoogleSession(credentials, scopes)
+end
 
 function print(io::IO, x::GoogleSession)
     println(io, "scopes: $(x.scopes)")
@@ -65,14 +74,14 @@ show(io::IO, x::GoogleSession) = print(io, x)
 
 Convert date-time into unix seconds.
 """
-unixseconds(x::DateTime) = trunc(Int64, datetime2unix(x))
+unixseconds(x::DateTime) = trunc(Int, datetime2unix(x))
 
 """
     JWTHeader
 
 JSON Web Token header.
 """
-type JWTHeader
+struct JWTHeader
     algorithm::String
 end
 function string(x::JWTHeader)
@@ -85,13 +94,13 @@ print(io::IO, x::JWTHeader) = print(io, string(x))
 
 JSON Web Token claim-set.
 """
-type JWTClaimSet
+struct JWTClaimSet
     issuer::String
     scopes::Vector{String}
     assertion::DateTime
     expiry::DateTime
-    function JWTClaimSet{S <: AbstractString}(issuer::AbstractString, scopes::Vector{S},
-        assertion::DateTime=now(UTC), expiry::DateTime=now(UTC) + Hour(1))
+    function JWTClaimSet(issuer::AbstractString, scopes::AbstractVector{<: AbstractString},
+                         assertion::DateTime=now(UTC), expiry::DateTime=now(UTC) + Hour(1))
         new(issuer, scopes, assertion, expiry)
     end
 end
@@ -110,10 +119,27 @@ print(io::IO, x::JWTClaimSet) = print(io, string(x))
 Construct the Base64-encoded JSON Web Signature based on the JWT header, claimset
 and signed using the private key provided in the Google JSON service-account key.
 """
-function JWS(credentials::GoogleCredentials, claimset::JWTClaimSet, header::JWTHeader=JWTHeader("RS256"))
+function JWS(credentials::JSONCredentials, claimset::JWTClaimSet, header::JWTHeader=JWTHeader("RS256"))
     payload = "$header.$claimset"
     signature = base64encode(SHA256withRSA(payload, credentials.private_key))
     "$payload.$signature"
+end
+
+function token(credentials::JSONCredentials, scopes::AbstractVector{<: AbstractString})
+    # construct claim-set from service account email and requested scopes
+    claimset = JWTClaimSet(credentials.client_email, scopes)
+    data = Requests.format_query_str(Dict{Symbol, String}(
+        :grant_type => "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        :assertion => JWS(credentials, claimset)
+    ))
+    headers = Dict{String, String}("Content-Type" => "application/x-www-form-urlencoded")
+    Requests.post("$AUD_ROOT"; data=data, headers=headers), claimset.assertion
+end
+
+function token(credentials::MetadataCredentials, ::AbstractVector{<: AbstractString})
+    headers = Dict{String, String}("Metadata-Flavor" => "Google")
+    assertion = now(UTC)
+    Requests.get(joinpath(credentials.url, "token"); headers=headers), assertion
 end
 
 """
@@ -123,25 +149,18 @@ Get OAuth 2.0 authorisation token from Google.
 
 If `cache` set to `true`, get a new token only if the existing token has expired.
 """
-function authorize(session::GoogleSession; cache=true)
+function authorize(session::GoogleSession; cache::Bool=true)
     # don't get a new token if a non-expired one exists
-    if cache && (session.expiry > now(UTC) + Second(5)) && !isempty(session.authorization)
+    if cache && (session.expiry >= now(UTC)) && !isempty(session.authorization)
         return session.authorization
     end
 
-    # construct claim-set from service account email and requested scopes
-    claimset = JWTClaimSet(session.credentials.client_email, session.scopes)
-    data = Requests.format_query_str(Dict{Symbol, String}(
-        :grant_type => "urn:ietf:params:oauth:grant-type:jwt-bearer",
-        :assertion => JWS(session.credentials, claimset)
-    ))
-    headers = Dict{String, String}("Content-Type" => "application/x-www-form-urlencoded")
-    res = Requests.post("$AUD_ROOT"; data=data, headers=headers)
+    res, assertion = token(session.credentials, session.scopes)
 
     # check if request successful
     if statuscode(res) != 200
-        session.authorization = typeof(session.authorization)()
-        session.expiry = 0
+        session.expiry = DateTime()
+        empty!(session.authorization)
         throw(SessionError("Unable to obtain authorization: $(readstring(res))"))
     end
 
@@ -149,11 +168,11 @@ function authorize(session::GoogleSession; cache=true)
 
     # cache authorization if required
     if cache
-        session.expiry = claimset.expiry
+        session.expiry = assertion + Second(authorization[:expires_in] - 30)
         session.authorization = authorization
     else
-        session.expiry = 0
-        session.authorization = typeof(session.authorization)()
+        session.expiry = DateTime()
+        empty!(session.authorization)
     end
     authorization
 end
