@@ -51,15 +51,27 @@ mutable struct GoogleSession{T <: Credentials}
         new{T}(credentials, scopes, Dict{String, String}(), DateTime())
     end
 end
-function GoogleSession(credentials::AbstractString=get(ENV, "GOOGLE_APPLICATION_CREDENTIALS", ""),
+function GoogleSession(credentials::Union{AbstractString, Void},
                        scopes::AbstractVector{<: AbstractString}=String[])
-    if isempty(credentials) || isurl(credentials)
-        credentials = MetadataCredentials(credentials)
-        scopes = credentials.scopes[:]
-    else
+    if credentials === nothing
+        credentials = ""
+    end
+    if isfile(credentials)
         credentials = JSONCredentials(credentials)
+    else
+        if isempty(credentials)
+            credentials = MetadataCredentials()
+        elseif isurl(credentials)
+            credentials = MetadataCredentials(; url=credentials)
+        else
+            throw(CredentialError("Invalid credentials: ", credentials))
+        end
+        scopes = intersect(scopes, credentials.scopes)
     end
     GoogleSession(credentials, scopes)
+end
+function GoogleSession(scopes::AbstractVector{<: AbstractString})
+    GoogleSession(get(ENV, "GOOGLE_APPLICATION_CREDENTIALS", ""), scopes)
 end
 
 function print(io::IO, x::GoogleSession)
@@ -137,9 +149,8 @@ function token(credentials::JSONCredentials, scopes::AbstractVector{<: AbstractS
 end
 
 function token(credentials::MetadataCredentials, ::AbstractVector{<: AbstractString})
-    headers = Dict{String, String}("Metadata-Flavor" => "Google")
     assertion = now(UTC)
-    Requests.get(joinpath(credentials.url, "token"); headers=headers), assertion
+    get(credentials, "token"), assertion
 end
 
 """

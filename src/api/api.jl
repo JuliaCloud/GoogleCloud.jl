@@ -3,7 +3,7 @@ General framework for representing Google JSON APIs.
 """
 module api
 
-export APIRoot, APIResource, APIMethod, set_session!, iserror
+export APIRoot, APIResource, APIMethod, set_session!, get_session, iserror
 
 using Base.Dates
 
@@ -49,7 +49,8 @@ path_replace("/{foo}/{bar}/{baz}", ["this", "is", "it"])
 path_replace(path::AbstractString, values) = reduce((x, y) -> replace(x, y[1], URIParser.escape(y[2]), 1), path, zip(path_tokens(path), values))
 
 """Check if response is/contains an error"""
-iserror(x::Any) = isa(x, Dict{Symbol, Any}) && haskey(x, :error)
+iserror(x::Associative{Symbol}) = haskey(x, :error)
+iserror(::Any) = false
 
 """
     APIMethod(verb, path, description)
@@ -174,6 +175,15 @@ forget session.
 function set_session!(api::APIRoot, session::Union{GoogleSession, Void})
     _default_session[api] = session
     nothing
+end
+
+"""
+    get_session(api)
+
+Get the default session for a specific API.
+"""
+function get_session(api::APIRoot)
+    get(_default_session, api, nothing)
 end
 
 function (api::APIRoot)(resource_name::Symbol)

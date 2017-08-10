@@ -12,21 +12,50 @@ import Requests
 using URIParser
 
 using ..error
+using ..root
 
 abstract type Credentials end
 
+"""
+Get credential/service-account information from GCE metadata server
+
+See [Storing and Retreiving Instance Metadata](https://cloud.google.com/compute/docs/storing-retrieving-metadata)
+"""
 struct MetadataCredentials <: Credentials
     url::String
+    service_account::String
+    project_id::String
+    client_email::String
     scopes::Vector{String}
-    function Metadata(url::AbstractString="$METADATA_ROOT/instance/service-accounts/default")
-        headers = Dict{String, String}("Metadata-Flavor" => "Google")
-        res = Requests.get(joinpath(url, "scopes"), headers=headers)
-        if statuscode(res) != 200
-            throw(CredentialError("Unable to obtain credentials from metadata server"))
+    function MetadataCredentials(; url::AbstractString=METADATA_ROOT, service_account::AbstractString="default")
+        metadata = new(url, service_account)
+        try
+            metadata.project_id = get(metadata, "project-id"; context=:project)
+            metadata.client_email = get(metadata, "email"; context=:service_account)
+            metadata.scopes = split(get(metadata, "scopes"; context=:service_account), '\n')
+        catch e
+            throw(CredentialError("Unable to contact metadata server"))
         end
-        scopes = split(String(res.data), '\n')
-        new(url, scopes)
+        metadata
     end
+end
+
+function Base.get(credentials::MetadataCredentials, path::AbstractString; context::Symbol=:service_account)
+    headers = Dict{String, String}("Metadata-Flavor" => "Google")
+    if context == :service_account
+        url = joinpath(credentials.url, "instance/service-accounts/$(credentials.service_account)")
+    elseif context == :instance
+        url = joinpath(credentials.url, "instance")
+    elseif context == :project
+        url = joinpath(credentials.url, "project")
+    else
+        throw(CredentialError("Unknown metadata context: $context"))
+    end
+    res = Requests.get(url, headers=headers)
+    if statuscode(res) != 200
+        throw(CredentialError("Unable to obtain credentials from metadata server"))
+    end
+    String(res.data)
 end
 
 """
@@ -88,8 +117,8 @@ JSONCredentials(io::IO) = JSONCredentials(JSON.parse(io; dicttype=Dict{Symbol, S
 
 Base.convert(::Type{JSONCredentials}, x::AbstractString) = JSONCredentials(x)
 
-function print(io::IO, x::JSONCredentials)
-    fields = [:client_id, :client_email, :account_type, :project_id]
+function print(io::IO, x::Credentials)
+    fields = [:project_id, :client_email]
     print(io, join(("$field: $(getfield(x, field))" for field in fields), "\n"))
 end
 show(io::IO, x::JSONCredentials) = print(io, x)
