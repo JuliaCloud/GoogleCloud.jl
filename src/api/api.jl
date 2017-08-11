@@ -314,7 +314,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
             raw || (statuscode(res) >= 400) ? result : method.transform(result, resource.transform)
         end
     else
-        result, status = readstring(res), statuscode(res)
+        result, status = res.data, statuscode(res)
         status == 200 ? result : Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
     end
 end
