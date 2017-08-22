@@ -150,7 +150,7 @@ end
 
 function token(credentials::MetadataCredentials, ::AbstractVector{<: AbstractString})
     assertion = now(UTC)
-    get(credentials, "token"), assertion
+    JSON.parse(get(credentials, "token")), assertion
 end
 
 """

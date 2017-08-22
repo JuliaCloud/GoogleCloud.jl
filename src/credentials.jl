@@ -51,7 +51,7 @@ function Base.get(credentials::MetadataCredentials, path::AbstractString; contex
     else
         throw(CredentialError("Unknown metadata context: $context"))
     end
-    res = Requests.get(url, headers=headers)
+    res = Requests.get(joinpath(url, path), headers=headers)
     if statuscode(res) != 200
         throw(CredentialError("Unable to obtain credentials from metadata server"))
     end
