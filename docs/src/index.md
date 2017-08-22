@@ -54,13 +54,21 @@ using GoogleCloud
 Load the service account credentials obtained from Google:
 
 ```julia
-creds = JSONCredentials(expanduser("~/credentials.json"))
+credentials = JSONCredentials(expanduser("~/credentials.json"))
+```
+
+Alternatively, if the process is running on a Google Compute Engine instance,
+the credentials can be derived from the [instance metadata](https://cloud.google.com/compute/docs/storing-retrieving-metadata)
+directly (i.e. without JSON):
+
+```julia
+credentials = MetadataCredentials()
 ```
 
 Now, create a session with the credentials, requesting any required scopes:
 
 ```julia
-session = GoogleSession(creds, ["devstorage.full_control"])
+session = GoogleSession(credentials, ["devstorage.full_control"])
 ```
 
 Set the default session of an API using `set_session!`:
