@@ -29,14 +29,16 @@ struct MetadataCredentials <: Credentials
     scopes::Vector{String}
     function MetadataCredentials(; url::AbstractString=METADATA_ROOT, service_account::AbstractString="default")
         metadata = new(url, service_account)
-        try
-            metadata.project_id = get(metadata, "project-id"; context=:project)
-            metadata.client_email = get(metadata, "email"; context=:service_account)
-            metadata.scopes = split(get(metadata, "scopes"; context=:service_account), '\n')
+        project_id, client_email, scopes = try
+            (
+                get(metadata, "project-id"; context=:project),
+                get(metadata, "email"; context=:service_account),
+                split(chomp(get(metadata, "scopes"; context=:service_account)), '\n')
+            )
         catch e
             throw(CredentialError("Unable to contact metadata server"))
         end
-        metadata
+        new(url, service_account, project_id, client_email, scopes)
     end
 end
 
@@ -52,7 +54,7 @@ function Base.get(credentials::MetadataCredentials, path::AbstractString; contex
         throw(CredentialError("Unknown metadata context: $context"))
     end
     res = Requests.get(joinpath(url, path), headers=headers)
-    if statuscode(res) != 200
+    if Requests.statuscode(res) != 200
         throw(CredentialError("Unable to obtain credentials from metadata server"))
     end
     String(res.data)
