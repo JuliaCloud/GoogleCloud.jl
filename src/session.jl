@@ -145,12 +145,18 @@ function token(credentials::JSONCredentials, scopes::AbstractVector{<: AbstractS
         :assertion => JWS(credentials, claimset)
     ))
     headers = Dict{String, String}("Content-Type" => "application/x-www-form-urlencoded")
-    Requests.post("$AUD_ROOT"; data=data, headers=headers), claimset.assertion
+    res = Requests.post("$AUD_ROOT"; data=data, headers=headers)
+    if statuscode(res) != 200
+        throw(SessionError("Unable to obtain authorization: $(readstring(res))"))
+    end
+    authorization = Requests.json(res; dicttype=Dict{Symbol, Any})
+    authorization, claimset.assertion
 end
 
 function token(credentials::MetadataCredentials, ::AbstractVector{<: AbstractString})
     assertion = now(UTC)
-    get(credentials, "token"), assertion
+    authorization = JSON.parse(get(credentials, "token"); dicttype=Dict{Symbol, Any})
+    authorization, assertion
 end
 
 """
@@ -166,16 +172,11 @@ function authorize(session::GoogleSession; cache::Bool=true)
         return session.authorization
     end
 
-    res, assertion = token(session.credentials, session.scopes)
-
-    # check if request successful
-    if statuscode(res) != 200
+    authorization, assertion = try token(session.credentials, session.scopes) catch e
         session.expiry = DateTime()
         empty!(session.authorization)
-        throw(SessionError("Unable to obtain authorization: $(readstring(res))"))
+        rethrow(e)
     end
-
-    authorization = Requests.json(res; dicttype=Dict{Symbol, Any})
 
     # cache authorization if required
     if cache
