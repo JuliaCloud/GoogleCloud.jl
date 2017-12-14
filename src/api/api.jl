@@ -17,6 +17,8 @@ using ..session
 using ..error
 using ..root
 
+const GZIP_MAGIC_NUMBER = UInt8[0x1f, 0x8b, 0x08]
+
 """
     path_tokens(path)
 
@@ -249,7 +251,10 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         end
         if gzip
             params[:contentEncoding] = "gzip"
-            data = read(Vector{UInt8}(data) |> Libz.ZlibDeflateInputStream)
+            if !all(data[1:3] .== GZIP_MAGIC_NUMBER)
+                # check the data compression using gzip magic number
+                data = read(Vector{UInt8}(data) |> Libz.ZlibDeflateInputStream)
+            end 
         end
     end
 
