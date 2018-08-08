@@ -1,3 +1,3 @@
 using GoogleCloud
-using Base.Test
+using Test
 @test 1 == 1

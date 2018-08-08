@@ -113,7 +113,7 @@ Upload an object to the _a12345foo_ bucket:
 
 ```julia
 # String containing the contents of test_image.jpg. The semi-colon avoids an error caused by printing the returned value.
-file_contents = readstring(open("test_image.jpg", "r"));
+file_contents = read(open("test_image.jpg", "r"), String);
 
 # Upload
 storage(:Object, :insert, "a12345foo";     # Returns metadata about the object
