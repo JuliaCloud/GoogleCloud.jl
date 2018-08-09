@@ -3,7 +3,7 @@ module collection
 export
     KeyStore, connect!, destroy!, watch, unwatch
 
-using Base.Dates
+using Dates
 
 import JSON
 import MsgPack
@@ -37,7 +37,7 @@ val_format_map = Dict{Symbol, Tuple{Function, Function}}(
 """
 High-level container wrapping a Google Storage bucket
 """
-immutable KeyStore{K, V} <: Associative{K, V}
+struct KeyStore{K, V} <: AbstractDict{K, V}
     bucket_name::String
     session::GoogleSession
     key_decoder::Function
@@ -88,7 +88,7 @@ function connect!(store::KeyStore; location::AbstractString="US", empty::Bool=fa
     store
 end
 
-function destroy!{K, V}(store::KeyStore{K, V})
+function destroy!(store::KeyStore{K, V}) where {K, V}
     response = storage(:Bucket, :delete, store.bucket_name; session=store.session, fields="")
     if iserror(response)
         error("Unable to delete bucket: $(response[:error][:message])")
@@ -96,7 +96,7 @@ function destroy!{K, V}(store::KeyStore{K, V})
     nothing
 end
 
-function Base.print{K, V}(io::IO, store::KeyStore{K, V})
+function Base.print(io::IO, store::KeyStore{K, V}) where {K, V}
     print(io, @sprintf("""KeyStore{%s, %s}("%s")""", K, V, store.bucket_name))
 end
 Base.show(io::IO, store::KeyStore) = print(io, store)
@@ -114,7 +114,7 @@ function Base.setindex!{K, V}(store::KeyStore{K, V}, val::V, key::K)
     store
 end
 
-function Base.getindex{K, V}(store::KeyStore{K, V}, key::K)
+function Base.getindex(store::KeyStore{K, V}, key::K) where {K, V}
     name = store.key_encoder(key)
     data = storage(:Object, :get, store.bucket_name, name; session=store.session)
     if iserror(data)
@@ -124,7 +124,7 @@ function Base.getindex{K, V}(store::KeyStore{K, V}, key::K)
     convert(V, val)
 end
 
-function Base.get{K, V}(store::KeyStore{K, V}, key::K, default)
+function Base.get(store::KeyStore{K, V}, key::K, default) where {K, V}
     try
         return getindex(store, key)
     catch e
@@ -136,14 +136,14 @@ function Base.get{K, V}(store::KeyStore{K, V}, key::K, default)
     end
 end
 
-function Base.haskey{K, V}(store::KeyStore{K, V}, key::K)
+function Base.haskey(store::KeyStore{K, V}, key::K) where {K, V}
     name = store.key_encoder(key)
     response = storage(:Object, :get, store.bucket_name, name; session=store.session, alt="", fields="")
     !iserror(response)
 end
 
 # WARNING: potential for race condition. don't zip keys with values... use collect instead
-function Base.keys{K, V}(store::KeyStore{K, V})
+function Base.keys(store::KeyStore{K, V}) where {K, V}
     result = K[]
     for response in storage(:Object, :list, store.bucket_name; session=store.session, fields="items(name)")
         name = response[:name]
@@ -157,9 +157,11 @@ function Base.keys{K, V}(store::KeyStore{K, V})
 end
 
 # avoiding race condition where values might have been deleted after keys were generated
-Base.values{K, V}(store::KeyStore{K, V}) = (x for x in (get(store, key, Void) for key in keys(store)) if x !== Void)
+@inline function Base.values(store::KeyStore{K, V}) where {K, V}
+    (x for x in (get(store, key, Void) for key in keys(store)) if x !== Voide)
+end 
 
-function Base.delete!{K, V}(store::KeyStore{K, V}, key::K)
+function Base.delete!(store::KeyStore{K, V}, key::K) where {K, V}
     name = store.key_encoder(key)
     response = storage(:Object, :delete, store.bucket_name, name; session=store.session, fields="")
     if iserror(response)
@@ -168,19 +170,19 @@ function Base.delete!{K, V}(store::KeyStore{K, V}, key::K)
     store
 end
 
-function Base.pop!{K, V}(store::KeyStore{K, V}, key::K)
+function Base.pop!(store::KeyStore{K, V}, key::K) where {K, V}
     val = getindex(store, key)
     delete!(store, key)
     val
 end
 
-function Base.pop!{K, V}(store::KeyStore{K, V}, key::K, default)
+function Base.pop!(store::KeyStore{K, V}, key::K, default) where {K, V}
     val = get(store, key, default)
     delete!(store, key)
     val
 end
 
-function Base.merge!{K, V}(store::KeyStore{K, V}, d::Associative{K, V})
+function Base.merge!(store::KeyStore{K, V}, d::Associative{K, V}) where {K, V}
     for (k, v) in d
         store[k] = v
     end
@@ -190,7 +192,7 @@ Base.length(store::KeyStore) = length(collect(keys(store)))
 
 Base.isempty(store::KeyStore) = length(store) == 0
 
-function Base.empty!{K, V}(store::KeyStore{K, V})
+function Base.empty!(store::KeyStore{K, V}) where {K, V}
     for object in storage(:Object, :list, store.bucket_name; session=store.session, fields="items(name)")
         response = storage(:Object, :delete, store.bucket_name, object[:name]; session=store.session, fields="")
         if iserror(response)
@@ -201,7 +203,7 @@ function Base.empty!{K, V}(store::KeyStore{K, V})
 end
 
 """Skip over missing keys if any deleted since key list was geenrated"""
-function fast_forward{K, V}(store::KeyStore{K, V}, key_list)
+function fast_forward(store::KeyStore{K, V}, key_list) where {K, V}
     while !isempty(key_list)
         key = pop!(key_list)
         val = get(store, key, Void)
@@ -212,25 +214,26 @@ function fast_forward{K, V}(store::KeyStore{K, V}, key_list)
     nothing
 end
 
-function Base.start{K, V}(store::KeyStore{K, V})
+function Base.start(store::KeyStore{K, V}) where {K, V}
     key_list = collect(keys(store))
     return (fast_forward(store, key_list), key_list)
 end
 
-function Base.next{K, V}(store::KeyStore{K, V}, state)
+function Base.next(store::KeyStore{K, V}, state) where {K, V}
     pair, key_list = state
     return pair, (fast_forward(store, key_list), key_list)
 end
 
-function Base.done{K, V}(store::KeyStore{K, V}, state)
+function Base.done(store::KeyStore{K, V}, state) where {K, V}
     pair, key_list = state
     pair === nothing
 end
 
-Base.iteratorsize{K, V}(::Type{KeyStore{K, V}}) = Base.SizeUnknown()
+Base.iteratorsize(::Type{KeyStore{K, V}}) = Base.SizeUnknown() where {K, V}
 
 # notifications
-function watch{K, V}(store::KeyStore{K, V}, channel_id::AbstractString, address::AbstractString)
+function watch(store::KeyStore{K, V}, channel_id::AbstractString, 
+               address::AbstractString) where {K, V}
     if !isempty(store.channel)
         error("Already watching: $store.channel")
     end
@@ -244,7 +247,7 @@ function watch{K, V}(store::KeyStore{K, V}, channel_id::AbstractString, address:
     store.channel = channel
 end
 
-function unwatch{K, V}(store::KeyStore{K, V})
+function unwatch(store::KeyStore{K, V}) where {K, V}
     response = storage(:Channel, :stop; data=store.channel, session=store.session)
     if iserror(response)
         error("Unable to unwatch bucket: $(response[:error][:message])")

@@ -8,8 +8,9 @@ export Credentials, JSONCredentials, MetadataCredentials
 import Base: show, print
 import JSON
 import MbedTLS
-import Requests
-using URIParser
+#import Requests
+import HTTP
+using HTTP.URIs
 
 using ..error
 using ..root
@@ -53,8 +54,8 @@ function Base.get(credentials::MetadataCredentials, path::AbstractString; contex
     else
         throw(CredentialError("Unknown metadata context: $context"))
     end
-    res = Requests.get(joinpath(url, path), headers=headers)
-    if Requests.statuscode(res) != 200
+    res = HTTP.get(joinpath(url, path), headers=headers)
+    if HTTP.Messages.status(res) != 200
         throw(CredentialError("Unable to obtain credentials from metadata server"))
     end
     String(res.data)
@@ -66,7 +67,6 @@ end
 Parse JSON credentials created for a service-account at
 [Google Cloud Platform Console](https://console.cloud.google.com/apis/credentials)
 """
-
 struct JSONCredentials <: Credentials
     account_type::String
     project_id::String
@@ -98,9 +98,10 @@ end
 
 Initialise credentials from dictionary containing values.
 """
-function JSONCredentials(data::Associative{Symbol, <: AbstractString})
+function JSONCredentials(data::AbstractDict{Symbol, <: AbstractString})
     fields = fieldnames(JSONCredentials)
-    fields[findfirst(fields, :account_type)] = :type  # type is a keyword!
+    fields = [fields...,]
+    fields[findfirst(x->x==:account_type, fields)] = :type  # type is a keyword!
     missing = setdiff(fields, keys(data))
     if !isempty(missing)
         info(missing)
