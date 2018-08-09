@@ -102,7 +102,7 @@ end
 Base.show(io::IO, store::KeyStore) = print(io, store)
 Base.display(store::KeyStore) = print(store)
 
-function Base.setindex!{K, V}(store::KeyStore{K, V}, val::V, key::K)
+function Base.setindex!(store::KeyStore{K, V}, val::V, key::K) where {K, V}
     name = store.key_encoder(key)
     data = store.writer(val)
     response = storage(:Object, :insert, store.bucket_name; session=store.session,
@@ -158,7 +158,7 @@ end
 
 # avoiding race condition where values might have been deleted after keys were generated
 @inline function Base.values(store::KeyStore{K, V}) where {K, V}
-    (x for x in (get(store, key, Void) for key in keys(store)) if x !== Voide)
+    (x for x in (get(store, key, Nothing) for key in keys(store)) if x !== Voide)
 end 
 
 function Base.delete!(store::KeyStore{K, V}, key::K) where {K, V}
@@ -182,7 +182,7 @@ function Base.pop!(store::KeyStore{K, V}, key::K, default) where {K, V}
     val
 end
 
-function Base.merge!(store::KeyStore{K, V}, d::Associative{K, V}) where {K, V}
+function Base.merge!(store::KeyStore{K, V}, d::AbstractDict{K, V}) where {K, V}
     for (k, v) in d
         store[k] = v
     end
@@ -206,8 +206,8 @@ end
 function fast_forward(store::KeyStore{K, V}, key_list) where {K, V}
     while !isempty(key_list)
         key = pop!(key_list)
-        val = get(store, key, Void)
-        if val !== Void
+        val = get(store, key, Nothing)
+        if val !== Nothing
             return Pair{K, V}(key, val)
         end
     end

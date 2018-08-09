@@ -167,7 +167,7 @@ function token(credentials::JSONCredentials, scopes::AbstractVector{<: AbstractS
     headers = Dict{String, String}("Content-Type" => "application/x-www-form-urlencoded")
     res = HTTP.post("$AUD_ROOT", headers, data)
     if res.status != 200
-        throw(SessionError("Unable to obtain authorization: $(readstring(res))"))
+        throw(SessionError("Unable to obtain authorization: $(read(res, String))"))
     end
     authorization = JSON.json(res; dicttype=Dict{Symbol, Any})
     authorization, claimset.assertion
