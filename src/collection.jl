@@ -4,6 +4,7 @@ export
     KeyStore, connect!, destroy!, watch, unwatch
 
 using Dates
+using Printf
 
 import JSON
 import MsgPack
@@ -229,7 +230,9 @@ function Base.done(store::KeyStore{K, V}, state) where {K, V}
     pair === nothing
 end
 
-Base.iteratorsize(::Type{KeyStore{K, V}}) = Base.SizeUnknown() where {K, V}
+@inline function Base.IteratorSize(::Type{KeyStore{K, V}}) where {K, V} 
+    Base.SizeUnknown() 
+end 
 
 # notifications
 function watch(store::KeyStore{K, V}, channel_id::AbstractString, 

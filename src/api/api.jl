@@ -32,7 +32,7 @@ path_tokens("/{foo}/{bar}/x/{baz}")
  "{baz}"
 ```
 """
-path_tokens(path::AbstractString) = matchall(r"{\w+}", path)
+path_tokens(path::AbstractString) = collect(eachmatch(r"{\w+}", path))
 
 """
     path_replace(path, values)
@@ -47,7 +47,10 @@ path_replace("/{foo}/{bar}/{baz}", ["this", "is", "it"])
 "/this/is/it"
 ```
 """
-path_replace(path::AbstractString, values) = reduce((x, y) -> replace(x, y[1], HTTP.URIs.escapeuri(y[2]), 1), path, zip(path_tokens(path), values))
+function path_replace(path::AbstractString, values) 
+    reduce((x, y) -> replace(x, y[1], HTTP.URIs.escapeuri(y[2]), 1), 
+           path, zip(path_tokens(path), values))
+end 
 
 """Check if response is/contains an error"""
 iserror(x::AbstractDict{Symbol}) = haskey(x, :error)
@@ -213,13 +216,14 @@ Execute a method against the provided path arguments.
 
 Optionally provide parameters and data (with optional MIME content-type).
 """
-function execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::AbstractString...;
-    data::Union{AbstractString, AbstractDict, Vector{UInt8}, Nothing}=nothing,
-    gzip::Bool=false, content_type::AbstractString="application/json",
-    debug::Bool=false, raw::Bool=false,
-    max_backoff::TimePeriod=Second(64), max_attempts::Int64=10,
-    params...
-)
+function execute(session::GoogleSession, resource::APIResource, method::APIMethod, 
+            path_args::AbstractString...;
+            data::Union{AbstractString, AbstractDict, Vector{UInt8}, Nothing}=nothing,
+            gzip::Bool=false, content_type::AbstractString="application/json",
+            debug::Bool=false, raw::Bool=false,
+            max_backoff::TimePeriod=Second(64), max_attempts::Int64=10,
+            params...)
+    
     if length(path_args) != length(path_tokens(method.path))
         throw(APIError("Number of path arguments do not match"))
     end
@@ -278,7 +282,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
                          HTTP.URIs.URI(path_replace(method.path, path_args)), headers, data; 
                         query=params )
         catch e
-            if isa(e, Base.UVError) && e.code in (Base.UV_ECONNRESET, Base.UV_ECONNREFUSED, Base.UV_ECONNABORTED, Base.UV_EPIPE, Base.UV_ETIMEDOUT)
+            if isa(e, Base.IOError) && e.code in (Base.UV_ECONNRESET, Base.UV_ECONNREFUSED, Base.UV_ECONNABORTED, Base.UV_EPIPE, Base.UV_ETIMEDOUT)
             elseif isa(e, MbedTLS.MbedException) && e.ret in (MbedTLS.MBEDTLS_ERR_SSL_TIMEOUT, MbedTLS.MBEDTLS_ERR_SSL_CONN_EOF)
             else
                 rethrow(e)

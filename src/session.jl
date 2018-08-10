@@ -9,7 +9,8 @@ import Base: string, print, show
 using Dates, Base64 
 
 #using Requests
-using HTTP
+using HTTP, HTTP.Messages 
+
 import JSON
 import MbedTLS
 
@@ -49,7 +50,7 @@ mutable struct GoogleSession{T <: Credentials}
     """
     function GoogleSession(credentials::T, scopes::AbstractVector{<: AbstractString}) where {T <: Credentials}
         scopes = [isurl(scope) ? scope : "$SCOPE_ROOT/$scope" for scope in scopes]
-        new{T}(credentials, scopes, Dict{String, String}(), DateTime())
+        new{T}(credentials, scopes, Dict{String, String}(), DateTime(1))
     end
 end
 
@@ -157,19 +158,22 @@ function format_query_str(queryparams; uri = HTTP.URIs.URI(""))
     chop(query_str) # remove the trailing &
 end 
 
-function token(credentials::JSONCredentials, scopes::AbstractVector{<: AbstractString})
+function token(credentials::JSONCredentials, 
+               scopes::AbstractVector{<: AbstractString})
     # construct claim-set from service account email and requested scopes
     claimset = JWTClaimSet(credentials.client_email, scopes)
     data = format_query_str(Dict{Symbol, String}(
         :grant_type => "urn:ietf:params:oauth:grant-type:jwt-bearer",
         :assertion => JWS(credentials, claimset)
     ))
-    headers = Dict{String, String}("Content-Type" => "application/x-www-form-urlencoded")
+    headers = Dict{String, String}(
+                        "Content-Type" => "application/x-www-form-urlencoded")
     res = HTTP.post("$AUD_ROOT", headers, data)
     if res.status != 200
         throw(SessionError("Unable to obtain authorization: $(read(res, String))"))
     end
-    authorization = JSON.json(res; dicttype=Dict{Symbol, Any})
+    authorization = JSON.parse(payload(res, String); dicttype=Dict{Symbol, Any})
+    @show authorization 
     authorization, claimset.assertion
 end
 
@@ -193,7 +197,7 @@ function authorize(session::GoogleSession; cache::Bool=true)
     end
 
     authorization, assertion = try token(session.credentials, session.scopes) catch e
-        session.expiry = DateTime()
+        session.expiry = DateTime(1)
         empty!(session.authorization)
         rethrow(e)
     end
@@ -203,7 +207,7 @@ function authorize(session::GoogleSession; cache::Bool=true)
         session.expiry = assertion + Second(authorization[:expires_in] - 30)
         session.authorization = authorization
     else
-        session.expiry = DateTime()
+        session.expiry = DateTime(1)
         empty!(session.authorization)
     end
     authorization
