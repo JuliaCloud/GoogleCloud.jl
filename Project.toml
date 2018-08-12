@@ -4,6 +4,7 @@ authors = ["Josh Bode <joshbode@fastmail.com>"]
 version = "0.1.0"
 
 [deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 Libz = "2ec943e9-cfe8-584d-b93d-64dcb6d567b7"
