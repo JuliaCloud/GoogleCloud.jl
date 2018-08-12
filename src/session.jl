@@ -6,7 +6,7 @@ module session
 export GoogleSession, authorize
 
 import Base: string, print, show
-using Base.Dates
+using Dates
 
 using HTTP
 import JSON
@@ -51,7 +51,7 @@ mutable struct GoogleSession{T <: Credentials}
         new{T}(credentials, scopes, Dict{String, String}(), DateTime())
     end
 end
-function GoogleSession(credentials::Union{AbstractString, Void},
+function GoogleSession(credentials::Union{AbstractString, Nothing},
                        scopes::AbstractVector{<: AbstractString}=String[])
     if credentials === nothing
         credentials = ""

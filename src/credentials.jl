@@ -66,7 +66,6 @@ end
 Parse JSON credentials created for a service-account at
 [Google Cloud Platform Console](https://console.cloud.google.com/apis/credentials)
 """
-
 struct JSONCredentials <: Credentials
     account_type::String
     project_id::String
@@ -98,7 +97,7 @@ end
 
 Initialise credentials from dictionary containing values.
 """
-function JSONCredentials(data::Associative{Symbol, <: AbstractString})
+function JSONCredentials(data::AbstractDict{Symbol, <: AbstractString})
     fields = fieldnames(JSONCredentials)
     fields[findfirst(fields, :account_type)] = :type  # type is a keyword!
     missing = setdiff(fields, keys(data))
