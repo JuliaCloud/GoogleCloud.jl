@@ -1,8 +1,1 @@
 julia 0.7
-
-JSON 0.7.0
-MbedTLS 0.3.1
-HTTP
-Libz
-MsgPack
-URIParser

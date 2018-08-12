@@ -1,0 +1,12 @@
+name = "GoogleCloud"
+uuid = "05893f0c-9e7f-11e8-317d-451db4d01393"
+authors = ["Josh Bode <joshbode@fastmail.com>"]
+version = "0.1.0"
+
+[deps]
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+Libz = "2ec943e9-cfe8-584d-b93d-64dcb6d567b7"
+MbedTLS = "739be429-bea8-5141-9913-cc70e7f3736d"
+MsgPack = "99f44e22-a591-53d1-9472-aa23ef4bd671"
+URIParser = "30578b45-9adc-5946-b283-645ec420af67"
