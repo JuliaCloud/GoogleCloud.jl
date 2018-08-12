@@ -8,7 +8,7 @@ export GoogleSession, authorize
 import Base: string, print, show
 using Base.Dates
 
-using Requests
+using HTTP
 import JSON
 import MbedTLS
 
@@ -140,16 +140,16 @@ end
 function token(credentials::JSONCredentials, scopes::AbstractVector{<: AbstractString})
     # construct claim-set from service account email and requested scopes
     claimset = JWTClaimSet(credentials.client_email, scopes)
-    data = Requests.format_query_str(Dict{Symbol, String}(
+    data = HTTP.URIs.escapeuri(Dict{Symbol, String}(
         :grant_type => "urn:ietf:params:oauth:grant-type:jwt-bearer",
         :assertion => JWS(credentials, claimset)
     ))
     headers = Dict{String, String}("Content-Type" => "application/x-www-form-urlencoded")
-    res = Requests.post("$AUD_ROOT"; data=data, headers=headers)
-    if statuscode(res) != 200
-        throw(SessionError("Unable to obtain authorization: $(readstring(res))"))
+    res = HTTP.post("$AUD_ROOT", headers, data)
+    if res.status != 200
+        throw(SessionError("Unable to obtain authorization: $(String(res.body))"))
     end
-    authorization = Requests.json(res; dicttype=Dict{Symbol, Any})
+    authorization = JSON.parse(String(res.body); dicttype=Dict{Symbol, Any})
     authorization, claimset.assertion
 end
 

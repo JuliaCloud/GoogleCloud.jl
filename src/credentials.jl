@@ -8,7 +8,7 @@ export Credentials, JSONCredentials, MetadataCredentials
 import Base: show, print
 import JSON
 import MbedTLS
-import Requests
+import HTTP
 using URIParser
 
 using ..error
@@ -53,11 +53,11 @@ function Base.get(credentials::MetadataCredentials, path::AbstractString; contex
     else
         throw(CredentialError("Unknown metadata context: $context"))
     end
-    res = Requests.get(joinpath(url, path), headers=headers)
-    if Requests.statuscode(res) != 200
+    res = HTTP.get(joinpath(url, path), headers)
+    if res.status != 200
         throw(CredentialError("Unable to obtain credentials from metadata server"))
     end
-    String(res.data)
+    String(res.body)
 end
 
 """
