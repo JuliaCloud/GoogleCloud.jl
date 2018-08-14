@@ -141,28 +141,11 @@ function JWS(credentials::JSONCredentials, claimset::JWTClaimSet, header::JWTHea
     "$payload.$signature"
 end
 
-"""
-    format_query_str(queryparams; uri = URI(""))
-this function was copied from Requests.jl 
-"""
-function format_query_str(queryparams; uri = HTTP.URIs.URI(""))
-    query_str = isempty(uri.query) ? string() : string(uri.query, "&")
-
-    for (k, v) in queryparams
-        if isa(v, Array)
-            query_str *= join(map(vi -> "$(HTTP.URIs.escapepath(string(k)))=$(HTTP.URIs.escapeuri(string(vi)))", v), "&") * "&"
-        else
-            query_str *= "$(HTTP.URIs.escapepath(string(k)))=$(HTTP.URIs.escapeuri(string(v)))&"
-        end
-    end
-    chop(query_str) # remove the trailing &
-end 
-
 function token(credentials::JSONCredentials, 
                scopes::AbstractVector{<: AbstractString})
     # construct claim-set from service account email and requested scopes
     claimset = JWTClaimSet(credentials.client_email, scopes)
-    data = format_query_str(Dict{Symbol, String}(
+    data = HTTP.URIs.escapeuri(Dict{Symbol, String}(
         :grant_type => "urn:ietf:params:oauth:grant-type:jwt-bearer",
         :assertion => JWS(credentials, claimset)
     ))
@@ -173,7 +156,6 @@ function token(credentials::JSONCredentials,
         throw(SessionError("Unable to obtain authorization: $(read(res, String))"))
     end
     authorization = JSON.parse(payload(res, String); dicttype=Dict{Symbol, Any})
-    @show authorization 
     authorization, claimset.assertion
 end
 

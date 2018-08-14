@@ -8,9 +8,11 @@ export APIRoot, APIResource, APIMethod, set_session!, get_session, iserror
 using Dates, Base64
 
 using HTTP
+using URIParser 
 import MbedTLS
 import Libz
 import JSON
+using Markdown 
 
 using ..session
 using ..error
@@ -32,7 +34,7 @@ path_tokens("/{foo}/{bar}/x/{baz}")
  "{baz}"
 ```
 """
-path_tokens(path::AbstractString) = collect(eachmatch(r"{\w+}", path))
+path_tokens(path::AbstractString) = collect((m.match for m = eachmatch(r"{\w+}", path)))
 
 """
     path_replace(path, values)
@@ -47,10 +49,17 @@ path_replace("/{foo}/{bar}/{baz}", ["this", "is", "it"])
 "/this/is/it"
 ```
 """
-function path_replace(path::AbstractString, values) 
-    reduce((x, y) -> replace(x, y[1], HTTP.URIs.escapeuri(y[2]), 1), 
-           path, zip(path_tokens(path), values))
-end 
+path_replace(path::AbstractString, values) = reduce(
+                (x, y) -> replace(x, y[1]=>URIParser.escape(y[2]), count=1), 
+                zip(path_tokens(path), values); init=path)
+#function path_replace(path::AbstractString, values) 
+#    for value in values 
+#        path = replace(path, r"{\w+}"=>value, count=1)
+#    end 
+#    path 
+#    #reduce((x, y) -> replace(x, y[1], HTTP.URIs.escapeuri(y[2]), 1), path, 
+#    #       zip(path_tokens(path), values))
+#end 
 
 """Check if response is/contains an error"""
 iserror(x::AbstractDict{Symbol}) = haskey(x, :error)
@@ -75,7 +84,7 @@ struct APIMethod
 end
 function Base.print(io::IO, x::APIMethod)
     println(io, "$(x.verb): $(x.path)")
-    Base.Markdown.print_wrapped(io, x.description)
+    Markdown.print_wrapped(io, x.description)
 end
 Base.show(io::IO, x::APIMethod) = print(io, x)
 
@@ -223,8 +232,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
             debug::Bool=false, raw::Bool=false,
             max_backoff::TimePeriod=Second(64), max_attempts::Int64=10,
             params...)
-    
-    if length(path_args) != length(path_tokens(method.path))
+    if length(path_args) != path_tokens(method.path) |> length
         throw(APIError("Number of path arguments do not match"))
     end
 

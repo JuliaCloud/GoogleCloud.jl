@@ -3,6 +3,7 @@ julia 0.7
 Dates
 Base64
 Printf
+Markdown
 JSON 
 MbedTLS
 HTTP

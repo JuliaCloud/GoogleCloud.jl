@@ -21,13 +21,13 @@ end
 _deserialize_bytes(x) = deserialize(IOBuffer(x))
 
 # key serialiser/deserialiser pairs
-key_format_map = Dict{Symbol, Tuple{Function, Function}}(
+const KEY_FORMAT_MAP = Dict{Symbol, Tuple{Function, Function}}(
     :json => (JSON.json, JSON.parse),
     :string => (string, identity)
 )
 
 # value serialiser/deserialiser pairs
-val_format_map = Dict{Symbol, Tuple{Function, Function}}(
+const VAL_FORMAT_MAP = Dict{Symbol, Tuple{Function, Function}}(
     :json => (JSON.json, JSON.parse),
     :string => (string, identity),
     :data => (identity, identity),
@@ -38,7 +38,7 @@ val_format_map = Dict{Symbol, Tuple{Function, Function}}(
 """
 High-level container wrapping a Google Storage bucket
 """
-struct KeyStore{K, V} <: AbstractDict{K, V}
+struct KeyStore{K, V} <: AbstractDict{K, V} 
     bucket_name::String
     session::GoogleSession
     key_decoder::Function
@@ -47,30 +47,32 @@ struct KeyStore{K, V} <: AbstractDict{K, V}
     writer::Function
     gzip::Bool
     channel::Dict{Symbol, Any}
-    function KeyStore{K, V}(bucket_name::AbstractString, session::GoogleSession=get_session(storage);
-        location::AbstractString="US", empty::Bool=false, gzip::Bool=true,
-        key_format::Union{Symbol, AbstractString}=K <: String ? :string : :json,
-        val_format::Union{Symbol, AbstractString}=V <: String ? :string : :json
-    ) where {K, V}
-        key_encoder, key_decoder = try key_format_map[Symbol(key_format)] catch
-            error("Unknown key format: $key_format")
-        end
-        writer, reader = try val_format_map[Symbol(val_format)] catch
-            error("Unknown value format: $val_format")
-        end
-        store = new{K, V}(bucket_name, session,
-            (x) -> convert(K, key_decoder(x)), key_encoder,
-            reader, writer,
-            gzip, Dict{Symbol, Any}()
-        )
-        # establish availability of bucket
-        connect!(store; location=location, empty=empty)
-        store
+end
+
+function KeyStore{K,V}(bucket_name::AbstractString; session::GoogleSession=get_session(storage),
+                  location::AbstractString="US", empty::Bool=false, gzip::Bool=true,
+                  key_format::Union{Symbol, AbstractString}=K <: String ? :string : :json,
+                  val_format::Union{Symbol, AbstractString}=V <: String ? :string : :json) where {K,V}
+    
+    key_encoder, key_decoder = try KEY_FORMAT_MAP[Symbol(key_format)] catch
+        error("Unknown key format: $key_format")
     end
+    writer, reader = try VAL_FORMAT_MAP[Symbol(val_format)] catch
+        error("Unknown value format: $val_format")
+    end
+    
+    store = KeyStore{K,V}(bucket_name, session,
+        (x) -> convert(K, key_decoder(x)), key_encoder,
+        reader, writer,
+        gzip, Dict{Symbol, Any}()
+    )
+    # establish availability of bucket
+    connect!(store; location=location, empty=empty)
+    store
 end
 
 function connect!(store::KeyStore; location::AbstractString="US", empty::Bool=false)
-    response = storage(:Bucket, :get, store.bucket_name; session=store.session, fields="")
+    response = storage(:Bucket, :get, store.bucket_name; session=store.session, fields="") 
     if iserror(response)
         code = response[:error][:code]
         if code == 404  # not found (available)
