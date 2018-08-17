@@ -98,7 +98,7 @@ end
 Initialise credentials from dictionary containing values.
 """
 function JSONCredentials(data::AbstractDict{Symbol, <: AbstractString})
-    fields = fieldnames(JSONCredentials)
+    fields = [fieldnames(JSONCredentials)...]
     fields[findfirst(fields, :account_type)] = :type  # type is a keyword!
     missing = setdiff(fields, keys(data))
     if !isempty(missing)
