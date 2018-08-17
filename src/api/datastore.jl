@@ -12,8 +12,8 @@ using ...root
 module types
     export ValueType, OperatorType, wrap, unwrap
 
-    using Base.Dates
-
+    using Dates
+    using Base64
     import JSON
 
     """Datastore value types"""
@@ -47,7 +47,7 @@ module types
         AbstractString => stringValue,
         Char => stringValue,
         Enum => stringValue,
-        Void => nullValue,
+        Nothing => nullValue,
     )
     function wrap(x)
         T = typeof(x)
