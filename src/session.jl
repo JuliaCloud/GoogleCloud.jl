@@ -9,6 +9,7 @@ import Base: string, print, show
 using Dates
 
 using HTTP
+using Base64
 import JSON
 import MbedTLS
 

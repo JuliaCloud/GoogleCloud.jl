@@ -290,9 +290,9 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         if debug && (res !== nothing)
             @info("Request URL: $(req_uri)")
             @info("Request Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(res.request.headers))), "\n"))
-            @info("Request Data:\n  " * Base64.base64encode(res.request.body))
+            @info("Request Data:\n  " * base64encode(res.request.body))
             @info("Response Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(res.headers))), "\n"))
-            @info("Response Data:\n  " * Base64.base64encode(res.body))
+            @info("Response Data:\n  " * base64encode(res.body))
             @info("Status: $(res.status)")
         end
 

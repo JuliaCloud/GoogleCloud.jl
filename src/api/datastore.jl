@@ -13,7 +13,7 @@ module types
     export ValueType, OperatorType, wrap, unwrap
 
     using Dates
-
+    using Base64
     import JSON
 
     """Datastore value types"""
