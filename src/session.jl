@@ -49,7 +49,7 @@ mutable struct GoogleSession{T <: Credentials}
     """
     function GoogleSession(credentials::T, scopes::AbstractVector{<: AbstractString}) where {T <: Credentials}
         scopes = [isurl(scope) ? scope : "$SCOPE_ROOT/$scope" for scope in scopes]
-        new{T}(credentials, scopes, Dict{String, String}(), DateTime())
+        new{T}(credentials, scopes, Dict{String, String}(), DateTime(1))
     end
 end
 function GoogleSession(credentials::Union{AbstractString, Nothing},
@@ -174,7 +174,7 @@ function authorize(session::GoogleSession; cache::Bool=true)
     end
 
     authorization, assertion = try token(session.credentials, session.scopes) catch e
-        session.expiry = DateTime()
+        session.expiry = DateTime(1)
         empty!(session.authorization)
         rethrow(e)
     end
@@ -184,7 +184,7 @@ function authorize(session::GoogleSession; cache::Bool=true)
         session.expiry = assertion + Second(authorization[:expires_in] - 30)
         session.authorization = authorization
     else
-        session.expiry = DateTime()
+        session.expiry = DateTime(1)
         empty!(session.authorization)
     end
     authorization
