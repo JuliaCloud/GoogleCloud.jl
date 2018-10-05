@@ -50,9 +50,10 @@ struct KeyStore{K, V} <: AbstractDict{K, V}
 end
 
 function KeyStore{K,V}(bucket_name::AbstractString; session::GoogleSession=get_session(storage),
-                  location::AbstractString="US", empty::Bool=false, gzip::Bool=true,
-                  key_format::Union{Symbol, AbstractString}=K <: String ? :string : :json,
-                  val_format::Union{Symbol, AbstractString}=V <: String ? :string : :json) where {K,V}
+                location::AbstractString="US", empty::Bool=false, gzip::Bool=true,
+                key_format::Union{Symbol, AbstractString}=K <: String ? :string : :json,
+                val_format::Union{Symbol, AbstractString}=V <: String ? :string : :json,
+                debug=false) where {K,V}
     
     key_encoder, key_decoder = try KEY_FORMAT_MAP[Symbol(key_format)] catch
         error("Unknown key format: $key_format")
@@ -67,21 +68,26 @@ function KeyStore{K,V}(bucket_name::AbstractString; session::GoogleSession=get_s
         gzip, Dict{Symbol, Any}()
     )
     # establish availability of bucket
-    connect!(store; location=location, empty=empty)
+    connect!(store; location=location, empty=empty, debug=debug)
     store
 end
 
-function connect!(store::KeyStore; location::AbstractString="US", empty::Bool=false)
-    response = storage(:Bucket, :get, store.bucket_name; session=store.session, fields="") 
+function connect!(store::KeyStore; location::AbstractString="US", 
+                  empty::Bool=false, debug=false)
+    response = storage(:Bucket, :get, store.bucket_name; 
+                       session=store.session, fields="", debug=debug) 
     if iserror(response)
         code = response[:error][:code]
         if code == 404  # not found (available)
-            response = storage(:Bucket, :insert; session=store.session, data=Dict(:name => store.bucket_name, :location => location), fields="")
+            response = storage(:Bucket, :insert; session=store.session, 
+                               data=Dict(:name => store.bucket_name, :location => location), 
+                               fields="", debug=debug)
             if iserror(response)
                 error("Unable to create bucket: $(response[:error][:message])")
             end
         elseif code == 403  # forbidden (not available)
-            error("Authorization failure or bucket name already taken: $(response[:error][:message])")
+            error("Authorization failure or bucket name already taken: ",
+                  response[:error][:message])
         else
             error("Error checking bucket: $(response[:error][:message])")
         end

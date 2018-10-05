@@ -219,7 +219,8 @@ function (api::APIRoot)(resource_name::Symbol, method_name::Symbol, args...; kwa
 end
 
 """
-    execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::AbstractString...[; ...])
+    execute(session::GoogleSession, resource::APIResource, method::APIMethod, 
+            path_args::AbstractString...[; ...])
 
 Execute a method against the provided path arguments.
 
@@ -283,31 +284,41 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     max_backoff = Millisecond(max_backoff)
     for attempt = 1:max(max_attempts, 1)
         if debug
-            info("Attempt: $attempt")
+            @info("Attempt: $attempt")
         end
+        @show HTTP.URIs.URI(path_replace(method.path, path_args))
+        @show data
+        @show headers
+        @show params 
+        @show string(method.verb)
         res = try
             HTTP.request(string(method.verb),
                          HTTP.URIs.URI(path_replace(method.path, path_args)), headers, data; 
                         query=params )
         catch e
-            if isa(e, Base.IOError) && e.code in (Base.UV_ECONNRESET, Base.UV_ECONNREFUSED, Base.UV_ECONNABORTED, Base.UV_EPIPE, Base.UV_ETIMEDOUT)
-            elseif isa(e, MbedTLS.MbedException) && e.ret in (MbedTLS.MBEDTLS_ERR_SSL_TIMEOUT, MbedTLS.MBEDTLS_ERR_SSL_CONN_EOF)
+            if isa(e, Base.IOError) && 
+                e.code in (Base.UV_ECONNRESET, Base.UV_ECONNREFUSED, Base.UV_ECONNABORTED, 
+                           Base.UV_EPIPE, Base.UV_ETIMEDOUT)
+            elseif isa(e, MbedTLS.MbedException) && 
+                    e.ret in (MbedTLS.MBEDTLS_ERR_SSL_TIMEOUT, MbedTLS.MBEDTLS_ERR_SSL_CONN_EOF)
             else
                 rethrow(e)
             end
         end
 
+        @show res 
         if debug && (res !== nothing)
-            info("Request URL: $(get(res.request).uri)")
-            info("Request Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(get(res.request).headers))), "\n"))
-            info("Request Data:\n  " * base64encode(get(res.request).data))
-            info("Response Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(res.headers))), "\n"))
-            info("Response Data:\n  " * base64encode(res.data))
-            info("Status: ", statuscode(res))
+            @info("Request URL: $(res.request.target)")
+            @info("Response Headers:\n" * join(("  $name: $value" for (name, value) in 
+                                                sort(collect(res.headers))), "\n"))
+            @info("Response Data:\n  " * base64encode(res.body))
+            @info("Status: ", res.status)
         end
 
         # https://cloud.google.com/storage/docs/exponential-backoff
-        if (res === nothing) || (div(statuscode(res), 100) == 5) || (statuscode(res) == 429)
+        @show res 
+        @show typeof(res)
+        if (res === nothing) || (div(res.status, 100) == 5) || (res.status == 429)
             if attempt < max_attempts
                 backoff = min(Millisecond(floor(Int, 1000 * (2 ^ (attempt - 1) + rand()))), max_backoff)
                 warn("Unable to complete request: Retrying ($attempt/$max_attempts) in $backoff")
@@ -326,10 +337,10 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
             nothing
         else
             result = JSON.json(res; dicttype=Dict{Symbol, Any})
-            raw || (statuscode(res) >= 400) ? result : method.transform(result, resource.transform)
+            raw || (res.status >= 400) ? result : method.transform(result, resource.transform)
         end
     else
-        result, status = res.data, statuscode(res)
+        result, status = res.data, res.status
         status == 200 ? result : Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
     end
 end
