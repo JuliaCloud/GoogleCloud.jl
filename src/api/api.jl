@@ -5,13 +5,13 @@ module api
 
 export APIRoot, APIResource, APIMethod, set_session!, get_session, iserror
 
-using Base.Dates
+using Dates, Base64
 
-using Requests
+using HTTP
 import MbedTLS
-import URIParser
 import Libz
 import JSON
+using Markdown 
 
 using ..session
 using ..error
@@ -33,7 +33,7 @@ path_tokens("/{foo}/{bar}/x/{baz}")
  "{baz}"
 ```
 """
-path_tokens(path::AbstractString) = matchall(r"{\w+}", path)
+path_tokens(path::AbstractString) = collect((m.match for m = eachmatch(r"{\w+}", path)))
 
 """
     path_replace(path, values)
@@ -48,10 +48,20 @@ path_replace("/{foo}/{bar}/{baz}", ["this", "is", "it"])
 "/this/is/it"
 ```
 """
-path_replace(path::AbstractString, values) = reduce((x, y) -> replace(x, y[1], URIParser.escape(y[2]), 1), path, zip(path_tokens(path), values))
+path_replace(path::AbstractString, values) = reduce(
+                (x, y) -> replace(x, y[1]=>HTTP.URIs.escapeuri(y[2]), count=1), 
+                zip(path_tokens(path), values); init=path)
+#function path_replace(path::AbstractString, values) 
+#    for value in values 
+#        path = replace(path, r"{\w+}"=>value, count=1)
+#    end 
+#    path 
+#    #reduce((x, y) -> replace(x, y[1], HTTP.URIs.escapeuri(y[2]), 1), path, 
+#    #       zip(path_tokens(path), values))
+#end 
 
 """Check if response is/contains an error"""
-iserror(x::Associative{Symbol}) = haskey(x, :error)
+iserror(x::AbstractDict{Symbol}) = haskey(x, :error)
 iserror(::Any) = false
 
 """
@@ -66,14 +76,14 @@ struct APIMethod
     default_params::Dict{Symbol, Any}
     transform::Function
     function APIMethod(verb::Symbol, path::AbstractString, description::AbstractString,
-                       default_params::Associative{Symbol}=Dict{Symbol, Any}();
+                       default_params::AbstractDict{Symbol}=Dict{Symbol, Any}();
                        transform=(x, t) -> x)
         new(verb, path, description, default_params, transform)
     end
 end
 function Base.print(io::IO, x::APIMethod)
     println(io, "$(x.verb): $(x.path)")
-    Base.Markdown.print_wrapped(io, x.description)
+    Markdown.print_wrapped(io, x.description)
 end
 Base.show(io::IO, x::APIMethod) = print(io, x)
 
@@ -134,7 +144,7 @@ struct APIRoot
     An API rooted at `path` with specified OAuth 2.0 access scopes and
     resources.
     """
-    function APIRoot(path::AbstractString, scopes::Associative{<: AbstractString, <: AbstractString}; resources...)
+    function APIRoot(path::AbstractString, scopes::AbstractDict{<: AbstractString, <: AbstractString}; resources...)
         if !isurl(path)
             throw(APIError("API root must be a valid URL."))
         end
@@ -156,6 +166,7 @@ struct APIRoot
         new(path, scopes, resources)
     end
 end
+
 function Base.print(io::IO, x::APIRoot)
     println(io, x.path, "\n")
     for (name, resource) in sort(collect(x.resources), by=(x) -> x[1])
@@ -174,7 +185,7 @@ Base.show(io::IO, x::APIRoot) = print(io, x)
 Set the default session for a specific API. Set session to `nothing` to
 forget session.
 """
-function set_session!(api::APIRoot, session::Union{GoogleSession, Void})
+function set_session!(api::APIRoot, session::Union{GoogleSession, Nothing})
     _default_session[api] = session
     nothing
 end
@@ -208,20 +219,21 @@ function (api::APIRoot)(resource_name::Symbol, method_name::Symbol, args...; kwa
 end
 
 """
-    execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::AbstractString...[; ...])
+    execute(session::GoogleSession, resource::APIResource, method::APIMethod, 
+            path_args::AbstractString...[; ...])
 
 Execute a method against the provided path arguments.
 
 Optionally provide parameters and data (with optional MIME content-type).
 """
-function execute(session::GoogleSession, resource::APIResource, method::APIMethod, path_args::AbstractString...;
-    data::Union{AbstractString, Associative, Vector{UInt8}, Void}=nothing,
-    gzip::Bool=false, content_type::AbstractString="application/json",
-    debug::Bool=false, raw::Bool=false,
-    max_backoff::TimePeriod=Second(64), max_attempts::Int64=10,
-    params...
-)
-    if length(path_args) != length(path_tokens(method.path))
+function execute(session::GoogleSession, resource::APIResource, method::APIMethod, 
+            path_args::AbstractString...;
+            data::Union{AbstractString, AbstractDict, Vector{UInt8}}="",
+            gzip::Bool=false, content_type::AbstractString="application/json",
+            debug::Bool=false, raw::Bool=false,
+            max_backoff::TimePeriod=Second(64), max_attempts::Int64=10,
+            params...)
+    if length(path_args) != path_tokens(method.path) |> length
         throw(APIError("Number of path arguments do not match"))
     end
 
@@ -233,18 +245,19 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     params = Dict(params)
 
     # check if data provided when not expected
-    if xor((data !== nothing), in(method.verb, (:POST, :UPDATE, :PATCH, :PUT)))
-        data = nothing
+    if xor((!isempty(data)), in(method.verb, (:POST, :UPDATE, :PATCH, :PUT)))
+        data = ""
         content_type = ""
         headers["Content-Length"] = "0"
     end
 
+    if !isempty(content_type)
+        headers["Content-Type"] = content_type
+    end
+
     # serialise data to JSON if necessary
-    if data !== nothing
-        if !isempty(content_type)
-            headers["Content-Type"] = content_type
-        end
-        if isa(data, Associative) || content_type == "application/json"
+    if !isempty(data)
+        if isa(data, AbstractDict) || content_type == "application/json"
             data = JSON.json(data)
         elseif isempty(data)
             headers["Content-Length"] = "0"
@@ -272,32 +285,36 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     max_backoff = Millisecond(max_backoff)
     for attempt = 1:max(max_attempts, 1)
         if debug
-            info("Attempt: $attempt")
+            @info("Attempt: $attempt")
         end
         res = try
-            Requests.do_request(
-                URIParser.URI(path_replace(method.path, path_args)), string(method.verb);
-                query=params, data=data, headers=headers, compressed=true
-            )
+            HTTP.request(string(method.verb),
+                        path_replace(method.path, path_args), headers, data; 
+                        query=params )
         catch e
-            if isa(e, Base.UVError) && e.code in (Base.UV_ECONNRESET, Base.UV_ECONNREFUSED, Base.UV_ECONNABORTED, Base.UV_EPIPE, Base.UV_ETIMEDOUT)
-            elseif isa(e, MbedTLS.MbedException) && e.ret in (MbedTLS.MBEDTLS_ERR_SSL_TIMEOUT, MbedTLS.MBEDTLS_ERR_SSL_CONN_EOF)
-            else
-                rethrow(e)
-            end
+        #    if isa(e, Base.IOError) && 
+        #        e.code in (Base.UV_ECONNRESET, Base.UV_ECONNREFUSED, Base.UV_ECONNABORTED, 
+        #                   Base.UV_EPIPE, Base.UV_ETIMEDOUT)
+        #    elseif isa(e, MbedTLS.MbedException) && 
+        #            e.ret in (MbedTLS.MBEDTLS_ERR_SSL_TIMEOUT, MbedTLS.MBEDTLS_ERR_SSL_CONN_EOF)
+        #    else
+        #        println("get a HTTP request error: ", e)
+        #        rethrow(e)
+        #    end
+            println("get a HTTP request error: ", e)
+            rethrow(e)
         end
 
         if debug && (res !== nothing)
-            info("Request URL: $(get(res.request).uri)")
-            info("Request Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(get(res.request).headers))), "\n"))
-            info("Request Data:\n  " * base64encode(get(res.request).data))
-            info("Response Headers:\n" * join(("  $name: $value" for (name, value) in sort(collect(res.headers))), "\n"))
-            info("Response Data:\n  " * base64encode(res.data))
-            info("Status: ", statuscode(res))
+            @info("Request URL: $(res.request.target)")
+            @info("Response Headers:\n" * join(("  $name: $value" for (name, value) in 
+                                                sort(collect(res.headers))), "\n"))
+            @info("Response Data:\n  " * base64encode(res.body))
+            @info("Status: ", res.status)
         end
 
         # https://cloud.google.com/storage/docs/exponential-backoff
-        if (res === nothing) || (div(statuscode(res), 100) == 5) || (statuscode(res) == 429)
+        if (res === nothing) || (div(res.status, 100) == 5) || (res.status == 429)
             if attempt < max_attempts
                 backoff = min(Millisecond(floor(Int, 1000 * (2 ^ (attempt - 1) + rand()))), max_backoff)
                 warn("Unable to complete request: Retrying ($attempt/$max_attempts) in $backoff")
@@ -311,16 +328,19 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     end
 
     # if response is JSON, parse and return. otherwise, just dump data
-    if contains(res.headers["Content-Type"], "application/json")
-        if get(res.headers, "Content-Length", "") == "0"
-            nothing
+    # HTTP response header type is Vector{Pair{String,String}}
+    # https://github.com/JuliaWeb/HTTP.jl/blob/master/src/Messages.jl#L166
+    headers = Dict(res.headers)
+    if occursin("application/json", headers["Content-Type"])
+        if get(headers, "Content-Length", "") == "0"
+            return nothing
         else
-            result = Requests.json(res; dicttype=Dict{Symbol, Any})
-            raw || (statuscode(res) >= 400) ? result : method.transform(result, resource.transform)
+            result = JSON.parse(read(IOBuffer(res.body), String); dicttype=Dict{Symbol, Any})
+            return raw || (res.status >= 400) ? result : method.transform(result, resource.transform)
         end
     else
-        result, status = res.data, statuscode(res)
-        status == 200 ? result : Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
+        result, status = res.body, res.status
+        return status == 200 ? result : Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
     end
 end
 

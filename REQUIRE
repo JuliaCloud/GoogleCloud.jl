@@ -1,8 +1,11 @@
-julia 0.6
+julia 0.7
 
-JSON 0.7.0
-MbedTLS 0.3.1
-Requests
+Dates
+Base64
+Printf
+Markdown
+JSON 
+MbedTLS
+HTTP
 Libz
 MsgPack
-URIParser

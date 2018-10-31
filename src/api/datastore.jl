@@ -3,6 +3,8 @@ Google Cloud Datastore API
 """
 module _datastore
 
+using Base64
+
 export datastore
 
 using ..api
@@ -12,7 +14,7 @@ using ...root
 module types
     export ValueType, OperatorType, wrap, unwrap
 
-    using Base.Dates
+    using Dates
 
     import JSON
 
@@ -47,7 +49,7 @@ module types
         AbstractString => stringValue,
         Char => stringValue,
         Enum => stringValue,
-        Void => nullValue,
+        Nothing => nullValue,
     )
     function wrap(x)
         T = typeof(x)

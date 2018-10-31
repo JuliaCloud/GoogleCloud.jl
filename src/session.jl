@@ -6,9 +6,11 @@ module session
 export GoogleSession, authorize
 
 import Base: string, print, show
-using Base.Dates
+using Dates, Base64 
 
-using Requests
+#using Requests
+using HTTP, HTTP.Messages 
+
 import JSON
 import MbedTLS
 
@@ -48,10 +50,11 @@ mutable struct GoogleSession{T <: Credentials}
     """
     function GoogleSession(credentials::T, scopes::AbstractVector{<: AbstractString}) where {T <: Credentials}
         scopes = [isurl(scope) ? scope : "$SCOPE_ROOT/$scope" for scope in scopes]
-        new{T}(credentials, scopes, Dict{String, String}(), DateTime())
+        new{T}(credentials, scopes, Dict{String, String}(), DateTime(1))
     end
 end
-function GoogleSession(credentials::Union{AbstractString, Void},
+
+function GoogleSession(credentials::Union{AbstractString, Nothing},
                        scopes::AbstractVector{<: AbstractString}=String[])
     if credentials === nothing
         credentials = ""
@@ -70,6 +73,7 @@ function GoogleSession(credentials::Union{AbstractString, Void},
     end
     GoogleSession(credentials, scopes)
 end
+
 function GoogleSession(scopes::AbstractVector{<: AbstractString})
     GoogleSession(get(ENV, "GOOGLE_APPLICATION_CREDENTIALS", ""), scopes)
 end
@@ -137,19 +141,21 @@ function JWS(credentials::JSONCredentials, claimset::JWTClaimSet, header::JWTHea
     "$payload.$signature"
 end
 
-function token(credentials::JSONCredentials, scopes::AbstractVector{<: AbstractString})
+function token(credentials::JSONCredentials, 
+               scopes::AbstractVector{<: AbstractString})
     # construct claim-set from service account email and requested scopes
     claimset = JWTClaimSet(credentials.client_email, scopes)
-    data = Requests.format_query_str(Dict{Symbol, String}(
+    data = HTTP.URIs.escapeuri(Dict{Symbol, String}(
         :grant_type => "urn:ietf:params:oauth:grant-type:jwt-bearer",
         :assertion => JWS(credentials, claimset)
     ))
-    headers = Dict{String, String}("Content-Type" => "application/x-www-form-urlencoded")
-    res = Requests.post("$AUD_ROOT"; data=data, headers=headers)
-    if statuscode(res) != 200
-        throw(SessionError("Unable to obtain authorization: $(readstring(res))"))
+    headers = Dict{String, String}(
+                        "Content-Type" => "application/x-www-form-urlencoded")
+    res = HTTP.post("$AUD_ROOT", headers, data)
+    if res.status != 200
+        throw(SessionError("Unable to obtain authorization: $(read(res, String))"))
     end
-    authorization = Requests.json(res; dicttype=Dict{Symbol, Any})
+    authorization = JSON.parse(payload(res, String); dicttype=Dict{Symbol, Any})
     authorization, claimset.assertion
 end
 
@@ -173,7 +179,7 @@ function authorize(session::GoogleSession; cache::Bool=true)
     end
 
     authorization, assertion = try token(session.credentials, session.scopes) catch e
-        session.expiry = DateTime()
+        session.expiry = DateTime(1)
         empty!(session.authorization)
         rethrow(e)
     end
@@ -183,7 +189,7 @@ function authorize(session::GoogleSession; cache::Bool=true)
         session.expiry = assertion + Second(authorization[:expires_in] - 30)
         session.authorization = authorization
     else
-        session.expiry = DateTime()
+        session.expiry = DateTime(1)
         empty!(session.authorization)
     end
     authorization
