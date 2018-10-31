@@ -8,7 +8,6 @@ export APIRoot, APIResource, APIMethod, set_session!, get_session, iserror
 using Dates, Base64
 
 using HTTP
-using URIParser 
 import MbedTLS
 import Libz
 import JSON
@@ -50,7 +49,7 @@ path_replace("/{foo}/{bar}/{baz}", ["this", "is", "it"])
 ```
 """
 path_replace(path::AbstractString, values) = reduce(
-                (x, y) -> replace(x, y[1]=>URIParser.escape(y[2]), count=1), 
+                (x, y) -> replace(x, y[1]=>HTTP.URIs.escapeuri(y[2]), count=1), 
                 zip(path_tokens(path), values); init=path)
 #function path_replace(path::AbstractString, values) 
 #    for value in values 
@@ -251,11 +250,12 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         headers["Content-Length"] = "0"
     end
 
+    if !isempty(content_type)
+        headers["Content-Type"] = content_type
+    end
+
     # serialise data to JSON if necessary
     if data !== nothing
-        if !isempty(content_type)
-            headers["Content-Type"] = content_type
-        end
         if isa(data, AbstractDict) || content_type == "application/json"
             data = JSON.json(data)
         elseif isempty(data)
@@ -286,6 +286,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         if debug
             @info("Attempt: $attempt")
         end
+        @show method 
         @show HTTP.URIs.URI(path_replace(method.path, path_args))
         @show data
         @show headers
@@ -306,7 +307,6 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
             end
         end
 
-        @show res 
         if debug && (res !== nothing)
             @info("Request URL: $(res.request.target)")
             @info("Response Headers:\n" * join(("  $name: $value" for (name, value) in 
@@ -318,6 +318,8 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         # https://cloud.google.com/storage/docs/exponential-backoff
         @show res 
         @show typeof(res)
+        @show res.status
+        @show attempt
         if (res === nothing) || (div(res.status, 100) == 5) || (res.status == 429)
             if attempt < max_attempts
                 backoff = min(Millisecond(floor(Int, 1000 * (2 ^ (attempt - 1) + rand()))), max_backoff)

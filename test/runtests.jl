@@ -1,3 +1,5 @@
 using GoogleCloud
-using Test
-@test 1 == 1
+using Test 
+
+include("api.jl")
+include("storage.jl")
