@@ -166,6 +166,7 @@ struct APIRoot
         new(path, scopes, resources)
     end
 end
+
 function Base.print(io::IO, x::APIRoot)
     println(io, x.path, "\n")
     for (name, resource) in sort(collect(x.resources), by=(x) -> x[1])
@@ -227,7 +228,7 @@ Optionally provide parameters and data (with optional MIME content-type).
 """
 function execute(session::GoogleSession, resource::APIResource, method::APIMethod, 
             path_args::AbstractString...;
-            data::Union{AbstractString, AbstractDict, Vector{UInt8}, Nothing}=nothing,
+            data::Union{AbstractString, AbstractDict, Vector{UInt8}}="",
             gzip::Bool=false, content_type::AbstractString="application/json",
             debug::Bool=false, raw::Bool=false,
             max_backoff::TimePeriod=Second(64), max_attempts::Int64=10,
@@ -244,8 +245,8 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     params = Dict(params)
 
     # check if data provided when not expected
-    if xor((data !== nothing), in(method.verb, (:POST, :UPDATE, :PATCH, :PUT)))
-        data = nothing
+    if xor((!isempty(data)), in(method.verb, (:POST, :UPDATE, :PATCH, :PUT)))
+        data = ""
         content_type = ""
         headers["Content-Length"] = "0"
     end
@@ -255,7 +256,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     end
 
     # serialise data to JSON if necessary
-    if data !== nothing
+    if !isempty(data)
         if isa(data, AbstractDict) || content_type == "application/json"
             data = JSON.json(data)
         elseif isempty(data)
@@ -286,25 +287,22 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         if debug
             @info("Attempt: $attempt")
         end
-        @show method 
-        @show HTTP.URIs.URI(path_replace(method.path, path_args))
-        @show data
-        @show headers
-        @show params 
-        @show string(method.verb)
         res = try
             HTTP.request(string(method.verb),
-                         HTTP.URIs.URI(path_replace(method.path, path_args)), headers, data; 
+                        path_replace(method.path, path_args), headers, data; 
                         query=params )
         catch e
-            if isa(e, Base.IOError) && 
-                e.code in (Base.UV_ECONNRESET, Base.UV_ECONNREFUSED, Base.UV_ECONNABORTED, 
-                           Base.UV_EPIPE, Base.UV_ETIMEDOUT)
-            elseif isa(e, MbedTLS.MbedException) && 
-                    e.ret in (MbedTLS.MBEDTLS_ERR_SSL_TIMEOUT, MbedTLS.MBEDTLS_ERR_SSL_CONN_EOF)
-            else
-                rethrow(e)
-            end
+        #    if isa(e, Base.IOError) && 
+        #        e.code in (Base.UV_ECONNRESET, Base.UV_ECONNREFUSED, Base.UV_ECONNABORTED, 
+        #                   Base.UV_EPIPE, Base.UV_ETIMEDOUT)
+        #    elseif isa(e, MbedTLS.MbedException) && 
+        #            e.ret in (MbedTLS.MBEDTLS_ERR_SSL_TIMEOUT, MbedTLS.MBEDTLS_ERR_SSL_CONN_EOF)
+        #    else
+        #        println("get a HTTP request error: ", e)
+        #        rethrow(e)
+        #    end
+            println("get a HTTP request error: ", e)
+            rethrow(e)
         end
 
         if debug && (res !== nothing)
@@ -316,10 +314,6 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         end
 
         # https://cloud.google.com/storage/docs/exponential-backoff
-        @show res 
-        @show typeof(res)
-        @show res.status
-        @show attempt
         if (res === nothing) || (div(res.status, 100) == 5) || (res.status == 429)
             if attempt < max_attempts
                 backoff = min(Millisecond(floor(Int, 1000 * (2 ^ (attempt - 1) + rand()))), max_backoff)
@@ -334,16 +328,19 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     end
 
     # if response is JSON, parse and return. otherwise, just dump data
-    if contains(res.headers["Content-Type"], "application/json")
-        if get(res.headers, "Content-Length", "") == "0"
-            nothing
+    # HTTP response header type is Vector{Pair{String,String}}
+    # https://github.com/JuliaWeb/HTTP.jl/blob/master/src/Messages.jl#L166
+    headers = Dict(res.headers)
+    if occursin("application/json", headers["Content-Type"])
+        if get(headers, "Content-Length", "") == "0"
+            return nothing
         else
-            result = JSON.json(res; dicttype=Dict{Symbol, Any})
-            raw || (res.status >= 400) ? result : method.transform(result, resource.transform)
+            result = JSON.parse(read(IOBuffer(res.body), String); dicttype=Dict{Symbol, Any})
+            return raw || (res.status >= 400) ? result : method.transform(result, resource.transform)
         end
     else
-        result, status = res.data, res.status
-        status == 200 ? result : Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
+        result, status = res.body, res.status
+        return status == 200 ? result : Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
     end
 end
 

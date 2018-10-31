@@ -15,6 +15,5 @@ Google Cloud APIs for Julia
 
 This package thinly wraps the Google Cloud JSON APIs for Julia.
 
-Currently the package wraps the Google Cloud Storage API. Other APIs will be added in the future. See [this tutorial](https://juliacloud.github.io/GoogleCloud.jl/latest) for a detailed walk through the Google Storage API.
+See [this tutorial](https://juliacloud.github.io/GoogleCloud.jl/latest) for a detailed walk through the Google Storage API.
 
-**Note**: This package includes OAuth 2.0 functionality, which may be extracted into a separate package in the future.
