@@ -333,7 +333,6 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     for (key, value) in res.headers 
         if key=="Content-Type" 
             if value=="application/json"
-                contentLength = "0"
                 for (k2, v2) in res.headers 
                     if k2=="Content-Length" && v2=="0"
                         return HTTP.nobody 
