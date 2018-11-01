@@ -228,7 +228,7 @@ Optionally provide parameters and data (with optional MIME content-type).
 """
 function execute(session::GoogleSession, resource::APIResource, method::APIMethod, 
             path_args::AbstractString...;
-            data::Union{AbstractString, AbstractDict, Vector{UInt8}}="",
+            data::Union{AbstractString, AbstractDict, Vector{UInt8}}=HTTP.nobody,
             gzip::Bool=false, content_type::AbstractString="application/json",
             debug::Bool=false, raw::Bool=false,
             max_backoff::TimePeriod=Second(64), max_attempts::Int64=10,
@@ -246,7 +246,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
 
     # check if data provided when not expected
     if xor((!isempty(data)), in(method.verb, (:POST, :UPDATE, :PATCH, :PUT)))
-        data = ""
+        data = HTTP.nobody
         content_type = ""
         headers["Content-Length"] = "0"
     end
@@ -330,18 +330,28 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     # if response is JSON, parse and return. otherwise, just dump data
     # HTTP response header type is Vector{Pair{String,String}}
     # https://github.com/JuliaWeb/HTTP.jl/blob/master/src/Messages.jl#L166
-    headers = Dict(res.headers)
-    if occursin("application/json", headers["Content-Type"])
-        if get(headers, "Content-Length", "") == "0"
-            return nothing
-        else
-            result = JSON.parse(read(IOBuffer(res.body), String); dicttype=Dict{Symbol, Any})
-            return raw || (res.status >= 400) ? result : method.transform(result, resource.transform)
-        end
-    else
-        result, status = res.body, res.status
-        return status == 200 ? result : Dict{Symbol, Any}(:error => Dict{Symbol, Any}(:message => result, :code => status))
+    for (key, value) in res.headers 
+        if key=="Content-Type" 
+            if value=="application/json"
+                contentLength = "0"
+                for (k2, v2) in res.headers 
+                    if k2=="Content-Length" && v2=="0"
+                        return HTTP.nobody 
+                    end 
+                end 
+                result = JSON.parse(read(IOBuffer(res.body), String); 
+                                                            dicttype=Dict{Symbol, Any})
+                return raw || (res.status >= 400) ? result : 
+                                                method.transform(result, resource.transform)
+
+            else 
+                result, status = res.body, res.status
+                return status == 200 ? result : Dict{Symbol, Any}(:error => 
+                                    Dict{Symbol, Any}(:message => result, :code => status))
+            end 
+        end 
     end
+    nothing
 end
 
 const _default_session = Dict{APIRoot, GoogleSession}()
