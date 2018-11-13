@@ -223,21 +223,25 @@ function fast_forward(store::KeyStore{K, V}, key_list) where {K, V}
     nothing
 end
 
-function Base.start(store::KeyStore{K, V}) where {K, V}
-    key_list = collect(keys(store))
-    return (fast_forward(store, key_list), key_list)
-end
 
-function Base.next(store::KeyStore{K, V}, state) where {K, V}
-    pair, key_list = state
-    return pair, (fast_forward(store, key_list), key_list)
-end
-
-function Base.done(store::KeyStore{K, V}, state) where {K, V}
-    pair, key_list = state
-    pair === nothing
-end
-
+#function Base.iterate(store::KeyStore{K, V}) where {K, V}
+#
+#end 
+#function Base.start(store::KeyStore{K, V}) where {K, V}
+#    key_list = collect(keys(store))
+#    return (fast_forward(store, key_list), key_list)
+#end
+#
+#function Base.next(store::KeyStore{K, V}, state) where {K, V}
+#    pair, key_list = state
+#    return pair, (fast_forward(store, key_list), key_list)
+#end
+#
+#function Base.done(store::KeyStore{K, V}, state) where {K, V}
+#    pair, key_list = state
+#    pair === nothing
+#end
+#
 @inline function Base.IteratorSize(::Type{KeyStore{K, V}}) where {K, V} 
     Base.SizeUnknown() 
 end 
