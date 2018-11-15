@@ -1,10 +1,7 @@
 # GoogleCloud.jl
+[![Build Status](https://travis-ci.org/JuliaCloud/GoogleCloud.jl.svg?branch=master)](https://travis-ci.org/JuliaCloud/GoogleCloud.jl)
 
-[![Build Status](https://travis-ci.org/juliacloud/GoogleCloud.jl.svg?branch=master)](https://travis-ci.org/juliacloud/GoogleCloud.jl)
-[![Build status](https://ci.appveyor.com/api/projects/status/itmgxkcc75m9ulqd?svg=true)](https://ci.appveyor.com/project/JoshBode/googlecloud-jl)
-
-[![Coverage Status](https://coveralls.io/repos/github/juliacloud/GoogleCloud.jl/badge.svg?branch=master)](https://coveralls.io/github/juliacloud/GoogleCloud.jl?branch=master)
-[![codecov.io](http://codecov.io/github/juliacloud/GoogleCloud.jl/coverage.svg?branch=master)](http://codecov.io/github/juliacloud/GoogleCloud.jl?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/JuliaCloud/GoogleCloud.jl/badge.svg?branch=master)](https://coveralls.io/github/JuliaCloud/GoogleCloud.jl?branch=master)
 
 [![](https://img.shields.io/badge/docs-latest-blue.svg)](https://juliacloud.github.io/GoogleCloud.jl/latest)
 
