@@ -109,7 +109,6 @@ function Base.print(io::IO, store::KeyStore{K, V}) where {K, V}
     print(io, @sprintf("""KeyStore{%s, %s}("%s")""", K, V, store.bucket_name))
 end
 Base.show(io::IO, store::KeyStore) = print(io, store)
-Base.display(store::KeyStore) = print(store)
 
 function Base.setindex!(store::KeyStore{K, V}, val::V, key::K) where {K, V}
     name = store.key_encoder(key)
