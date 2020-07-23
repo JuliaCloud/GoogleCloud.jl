@@ -258,9 +258,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     # serialise data to JSON if necessary
     if !isempty(data)
         if isa(data, AbstractDict) || content_type == "application/json"
-            data = JSON.json(data)
-        elseif isempty(data)
-            headers["Content-Length"] = "0"
+            data = JSON.parse(transcode(String, data))
         end
         if gzip
             params[:contentEncoding] = "gzip"
@@ -269,6 +267,8 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
                 data = read(Vector{UInt8}(data) |> Libz.ZlibDeflateInputStream)
             end 
         end
+    else
+        headers["Content-Length"] = "0"
     end
 
     # merge in default parameters and evaluate any expressions
@@ -283,15 +283,31 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     # attempt request until exceeding maximum attempts, backing off exponentially
     res = nothing
     max_backoff = Millisecond(max_backoff)
-    for attempt = 1:max(max_attempts, 1)
+    max_attempts = max(max_attempts, 1)
+    for attempt = 1:max_attempts
         if debug
             @info("Attempt: $attempt")
         end
-        res = try
-            HTTP.request(string(method.verb),
-                        path_replace(method.path, path_args), headers, data; 
-                        query=params )
-        catch e
+
+        try 
+            res = HTTP.request(string(method.verb),
+                path_replace(method.path, path_args), headers, data; 
+                query=params )
+        catch err
+            if isa(err, HTTP.ExceptionRequest.StatusError) && err.status == 404
+                @info "got HTTP 404 error"
+                res = nothing
+            else
+                @warn "HTTP request error: $(err)"
+                @info "error type: $(typeof(err))"
+                if attempt == max_attempts
+                    rethrow()
+                else 
+                    continue
+                end
+            end
+        end
+        # catch e
         #    if isa(e, Base.IOError) && 
         #        e.code in (Base.UV_ECONNRESET, Base.UV_ECONNREFUSED, Base.UV_ECONNABORTED, 
         #                   Base.UV_EPIPE, Base.UV_ETIMEDOUT)
@@ -301,9 +317,10 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         #        println("get a HTTP request error: ", e)
         #        rethrow(e)
         #    end
-            println("get a HTTP request error: ", e)
-            rethrow(e)
-        end
+            # println("get a HTTP request error: ", e)
+            # rethrow(e)
+        #    nothing
+        # end
 
         if debug && (res !== nothing)
             @info("Request URL: $(res.request.target)")
@@ -314,13 +331,14 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         end
 
         # https://cloud.google.com/storage/docs/exponential-backoff
-        if (res === nothing) || (div(res.status, 100) == 5) || (res.status == 429)
+        if (div(res.status, 100) == 5) || (res.status == 429)
             if attempt < max_attempts
                 backoff = min(Millisecond(floor(Int, 1000 * (2 ^ (attempt - 1) + rand()))), max_backoff)
                 warn("Unable to complete request: Retrying ($attempt/$max_attempts) in $backoff")
                 sleep(backoff / Millisecond(Second(1)))
             else
                 warn("Unable to complete request: Stopping ($attempt/$max_attempts)")
+                rethrow()
             end
         else
             break
@@ -330,9 +348,9 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     # if response is JSON, parse and return. otherwise, just dump data
     # HTTP response header type is Vector{Pair{String,String}}
     # https://github.com/JuliaWeb/HTTP.jl/blob/master/src/Messages.jl#L166
-    for (key, value) in res.headers 
-        if key=="Content-Type" 
-            if value=="application/json"
+    if res !== nothing
+        for (key, value) in res.headers 
+            if key=="Content-Type" && value=="application/json"
                 for (k2, v2) in res.headers 
                     if k2=="Content-Length" && v2=="0"
                         return HTTP.nobody 
@@ -348,8 +366,9 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
                 return status == 200 ? result : Dict{Symbol, Any}(:error => 
                                     Dict{Symbol, Any}(:message => result, :code => status))
             end 
-        end 
+        end
     end
+
     nothing
 end
 
