@@ -14,6 +14,8 @@ using HTTP, HTTP.Messages
 import JSON
 import MbedTLS
 
+using JLD2
+
 using ..error
 using ..credentials
 using ..root
@@ -175,14 +177,24 @@ If `cache` set to `true`, get a new token only if the existing token has expired
 function authorize(session::GoogleSession; cache::Bool=true)
     # don't get a new token if a non-expired one exists
     if cache && (session.expiry >= now(UTC)) && !isempty(session.authorization)
+        # println("reused cached authorization.")
+        # @show session.authorization
         return session.authorization
     end
 
+    println("refresh token.")
     authorization, assertion = try token(session.credentials, session.scopes) catch e
+        println("error type: ", typeof(e))
+        println("error: ", e)
+        # @save "/tmp/session.jld2" session.credentials session.scopes
         session.expiry = DateTime(1)
         empty!(session.authorization)
-        rethrow(e)
+        rethrow()
     end
+
+    # println("refreshed token successfully.")
+    @show authorization
+    @show assertion
 
     # cache authorization if required
     if cache

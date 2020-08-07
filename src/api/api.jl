@@ -225,20 +225,21 @@ end
 Execute a method against the provided path arguments.
 
 Optionally provide parameters and data (with optional MIME content-type).
+The default max_attempts is set to be 1 because HTTP.jl has retry internally. 
 """
 function execute(session::GoogleSession, resource::APIResource, method::APIMethod, 
             path_args::AbstractString...;
             data::Union{AbstractString, AbstractDict, Vector{UInt8}}=HTTP.nobody,
             gzip::Bool=false, content_type::AbstractString="application/json",
             debug::Bool=false, raw::Bool=false,
-            max_backoff::TimePeriod=Second(64), max_attempts::Int64=10,
+            max_backoff::TimePeriod=Second(64), max_attempts::Int64=1,
             params...)
     if length(path_args) != path_tokens(method.path) |> length
         throw(APIError("Number of path arguments do not match"))
     end
 
     # obtain and use access token
-    auth = authorize(session)
+    auth = authorize(session; cache=true)
     headers = Dict{String, String}(
         "Authorization" => "$(auth[:token_type]) $(auth[:access_token])"
     )
@@ -296,80 +297,57 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         catch err
             if isa(err, HTTP.ExceptionRequest.StatusError) && err.status == 404
                 @info "got HTTP 404 error"
-                res = nothing
+                return nothing
             else
                 @warn "HTTP request error: $(err)"
                 @info "error type: $(typeof(err))"
-                if attempt == max_attempts
-                    rethrow()
+                if isa(err, HTTP.ExceptionRequest.StatusError) && 
+                        (div(err.status, 100)==5 || err.status == 429) && 
+                        attempt < max_attempts
+
+                    backoff = min(Millisecond(floor(Int, 1000 * (2 ^ (attempt - 1) + rand()))), max_backoff)
+                    warn("Unable to complete request: Retrying ($attempt/$max_attempts) in $backoff")
+                    sleep(backoff / Millisecond(Second(1)))
                 else 
-                    continue
+                    rethrow()
                 end
             end
         end
-        # catch e
-        #    if isa(e, Base.IOError) && 
-        #        e.code in (Base.UV_ECONNRESET, Base.UV_ECONNREFUSED, Base.UV_ECONNABORTED, 
-        #                   Base.UV_EPIPE, Base.UV_ETIMEDOUT)
-        #    elseif isa(e, MbedTLS.MbedException) && 
-        #            e.ret in (MbedTLS.MBEDTLS_ERR_SSL_TIMEOUT, MbedTLS.MBEDTLS_ERR_SSL_CONN_EOF)
-        #    else
-        #        println("get a HTTP request error: ", e)
-        #        rethrow(e)
-        #    end
-            # println("get a HTTP request error: ", e)
-            # rethrow(e)
-        #    nothing
-        # end
-
-        if debug && (res !== nothing)
-            @info("Request URL: $(res.request.target)")
-            @info("Response Headers:\n" * join(("  $name: $value" for (name, value) in 
-                                                sort(collect(res.headers))), "\n"))
-            @info("Response Data:\n  " * base64encode(res.body))
-            @info("Status: ", res.status)
-        end
-
-        # https://cloud.google.com/storage/docs/exponential-backoff
-        if (div(res.status, 100) == 5) || (res.status == 429)
-            if attempt < max_attempts
-                backoff = min(Millisecond(floor(Int, 1000 * (2 ^ (attempt - 1) + rand()))), max_backoff)
-                warn("Unable to complete request: Retrying ($attempt/$max_attempts) in $backoff")
-                sleep(backoff / Millisecond(Second(1)))
-            else
-                warn("Unable to complete request: Stopping ($attempt/$max_attempts)")
-                rethrow()
-            end
-        else
-            break
-        end
+    end
+    
+    if debug && (res != nothing)
+        @info("Request URL: $(res.request.target)")
+        @info("Response Headers:\n" * join(("  $name: $value" for (name, value) in 
+                                            sort(collect(res.headers))), "\n"))
+        @info("Response Data:\n  " * base64encode(res.body))
+        @info("Status: ", res.status)
     end
 
     # if response is JSON, parse and return. otherwise, just dump data
     # HTTP response header type is Vector{Pair{String,String}}
     # https://github.com/JuliaWeb/HTTP.jl/blob/master/src/Messages.jl#L166
-    if res !== nothing
-        for (key, value) in res.headers 
-            if key=="Content-Type" && value=="application/json"
-                for (k2, v2) in res.headers 
-                    if k2=="Content-Length" && v2=="0"
-                        return HTTP.nobody 
-                    end 
-                end 
+    if res != nothing
+        headers = res.headers
+        if "Content-Type" in headers && headers["Content-Type"] == "application/json"
+            if "Content-Length" in headers && headers["Content-Length"] == "0"
+                return nothing
+            else
                 result = JSON.parse(read(IOBuffer(res.body), String); 
                                                             dicttype=Dict{Symbol, Any})
                 return raw || (res.status >= 400) ? result : 
                                                 method.transform(result, resource.transform)
-
-            else 
-                result, status = res.body, res.status
-                return status == 200 ? result : Dict{Symbol, Any}(:error => 
-                                    Dict{Symbol, Any}(:message => result, :code => status))
-            end 
+            end
         end
+        
+        result, status = res.body, res.status
+        if status != 200
+            println("the HTTP status: ", status)
+            println("type of status: ", typeof(status))
+            @show res 
+        end
+        return result
     end
-
-    nothing
+    nothing        
 end
 
 const _default_session = Dict{APIRoot, GoogleSession}()
