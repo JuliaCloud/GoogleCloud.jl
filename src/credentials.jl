@@ -58,7 +58,7 @@ function Base.get(credentials::MetadataCredentials, path::AbstractString; contex
     if HTTP.Messages.status(res) != 200
         throw(CredentialError("Unable to obtain credentials from metadata server"))
     end
-    String(res.data)
+    String(res.body)
 end
 
 """
