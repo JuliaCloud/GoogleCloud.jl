@@ -17,7 +17,7 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 HTTP = "0.8"
 JSON = "0.21"
 Libz = "1"
-MbedTLS = "0.6, 0.7"
+MbedTLS = "0.6"
 MsgPack = "1"
 julia = "1"
 
