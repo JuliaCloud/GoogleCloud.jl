@@ -1,3 +1,4 @@
 docs/build/
 docs/site/
 .*.sw[a-z]
+Manifest.toml
