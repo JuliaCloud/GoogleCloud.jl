@@ -332,7 +332,8 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     # https://github.com/JuliaWeb/HTTP.jl/blob/master/src/Messages.jl#L166
     for (key, value) in res.headers 
         if key=="Content-Type" 
-            if value=="application/json"
+            content_type = split(value, ";")[1]
+            if content_type=="application/json"
                 for (k2, v2) in res.headers 
                     if k2=="Content-Length" && v2=="0"
                         return HTTP.nobody 
