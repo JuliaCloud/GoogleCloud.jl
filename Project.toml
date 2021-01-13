@@ -14,7 +14,7 @@ MsgPack = "99f44e22-a591-53d1-9472-aa23ef4bd671"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [compat]
-HTTP = "1"
+HTTP = "0.9"
 JSON = "0.21"
 Libz = "1"
 MbedTLS = "1"
