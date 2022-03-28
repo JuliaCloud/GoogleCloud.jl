@@ -1,6 +1,6 @@
 name = "GoogleCloud"
 uuid = "55e21f81-8b0a-565e-b5ad-6816892a5ee7"
-version = "0.8.2"
+version = "0.9"
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -17,9 +17,9 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 HTTP = "0.9"
 JSON = "0.21"
 Libz = "1"
-MbedTLS = "0.6"
+MbedTLS = "1"
 MsgPack = "1"
-julia = "1"
+julia = "1.6"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
