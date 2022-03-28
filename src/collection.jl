@@ -130,7 +130,7 @@ function Base.getindex(store::KeyStore{K, V}, key::K) where {K, V}
     if iserror(data)
         throw(KeyError(key))
     end
-    val = store.reader(data)
+    val = store.reader(String(data))
     convert(V, val)
 end
 
@@ -176,7 +176,7 @@ end
 
 # avoiding race condition where values might have been deleted after keys were generated
 @inline function Base.values(store::KeyStore{K, V}) where {K, V}
-    (x for x in (get(store, key, Nothing) for key in keys(store)) if x !== Voide)
+    (x for x in (get(store, key, Nothing) for key in keys(store)) if !isnothing(x))
 end
 
 function Base.delete!(store::KeyStore{K, V}, key::K) where {K, V}

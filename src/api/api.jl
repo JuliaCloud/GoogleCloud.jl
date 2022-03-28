@@ -11,7 +11,7 @@ using HTTP
 import MbedTLS
 import Libz
 import JSON
-using Markdown 
+using Markdown
 
 using ..session
 using ..error
@@ -49,16 +49,16 @@ path_replace("/{foo}/{bar}/{baz}", ["this", "is", "it"])
 ```
 """
 path_replace(path::AbstractString, values) = reduce(
-                (x, y) -> replace(x, y[1]=>HTTP.URIs.escapeuri(y[2]), count=1), 
+                (x, y) -> replace(x, y[1]=>HTTP.URIs.escapeuri(y[2]), count=1),
                 zip(path_tokens(path), values); init=path)
-#function path_replace(path::AbstractString, values) 
-#    for value in values 
+#function path_replace(path::AbstractString, values)
+#    for value in values
 #        path = replace(path, r"{\w+}"=>value, count=1)
-#    end 
-#    path 
-#    #reduce((x, y) -> replace(x, y[1], HTTP.URIs.escapeuri(y[2]), 1), path, 
+#    end
+#    path
+#    #reduce((x, y) -> replace(x, y[1], HTTP.URIs.escapeuri(y[2]), 1), path,
 #    #       zip(path_tokens(path), values))
-#end 
+#end
 
 """Check if response is/contains an error"""
 iserror(x::AbstractDict{Symbol}) = haskey(x, :error)
@@ -219,14 +219,14 @@ function (api::APIRoot)(resource_name::Symbol, method_name::Symbol, args...; kwa
 end
 
 """
-    execute(session::GoogleSession, resource::APIResource, method::APIMethod, 
+    execute(session::GoogleSession, resource::APIResource, method::APIMethod,
             path_args::AbstractString...[; ...])
 
 Execute a method against the provided path arguments.
 
 Optionally provide parameters and data (with optional MIME content-type).
 """
-function execute(session::GoogleSession, resource::APIResource, method::APIMethod, 
+function execute(session::GoogleSession, resource::APIResource, method::APIMethod,
             path_args::AbstractString...;
             data::Union{AbstractString, AbstractDict, Vector{UInt8}}=HTTP.nobody,
             gzip::Bool=false, content_type::AbstractString="application/json",
@@ -267,7 +267,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
             if !all(data[1:3] .== GZIP_MAGIC_NUMBER)
                 # check the data compression using gzip magic number
                 data = read(Vector{UInt8}(data) |> Libz.ZlibDeflateInputStream)
-            end 
+            end
         end
     end
 
@@ -289,13 +289,13 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
         end
         res = try
             HTTP.request(string(method.verb),
-                        path_replace(method.path, path_args), headers, data; 
+                        path_replace(method.path, path_args), headers, data;
                         query=params )
         catch e
-        #    if isa(e, Base.IOError) && 
-        #        e.code in (Base.UV_ECONNRESET, Base.UV_ECONNREFUSED, Base.UV_ECONNABORTED, 
+        #    if isa(e, Base.IOError) &&
+        #        e.code in (Base.UV_ECONNRESET, Base.UV_ECONNREFUSED, Base.UV_ECONNABORTED,
         #                   Base.UV_EPIPE, Base.UV_ETIMEDOUT)
-        #    elseif isa(e, MbedTLS.MbedException) && 
+        #    elseif isa(e, MbedTLS.MbedException) &&
         #            e.ret in (MbedTLS.MBEDTLS_ERR_SSL_TIMEOUT, MbedTLS.MBEDTLS_ERR_SSL_CONN_EOF)
         #    else
         #        println("get a HTTP request error: ", e)
@@ -307,7 +307,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
 
         if debug && (res !== nothing)
             @info("Request URL: $(res.request.target)")
-            @info("Response Headers:\n" * join(("  $name: $value" for (name, value) in 
+            @info("Response Headers:\n" * join(("  $name: $value" for (name, value) in
                                                 sort(collect(res.headers))), "\n"))
             @info("Response Data:\n  " * base64encode(res.body))
             @info("Status: ", res.status)
@@ -330,25 +330,25 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     # if response is JSON, parse and return. otherwise, just dump data
     # HTTP response header type is Vector{Pair{String,String}}
     # https://github.com/JuliaWeb/HTTP.jl/blob/master/src/Messages.jl#L166
-    for (key, value) in res.headers 
-        if key=="Content-Type" 
-            if value=="application/json"
-                for (k2, v2) in res.headers 
+    for (key, value) in res.headers
+        if key=="Content-Type"
+            if length(value)>=16 && value[1:16]=="application/json"
+                for (k2, v2) in res.headers
                     if k2=="Content-Length" && v2=="0"
-                        return HTTP.nobody 
-                    end 
-                end 
-                result = JSON.parse(read(IOBuffer(res.body), String); 
+                        return HTTP.nobody
+                    end
+                end
+                result = JSON.parse(read(IOBuffer(res.body), String);
                                                             dicttype=Dict{Symbol, Any})
-                return raw || (res.status >= 400) ? result : 
+                return raw || (res.status >= 400) ? result :
                                                 method.transform(result, resource.transform)
 
-            else 
+            else
                 result, status = res.body, res.status
-                return status == 200 ? result : Dict{Symbol, Any}(:error => 
+                return status == 200 ? result : Dict{Symbol, Any}(:error =>
                                     Dict{Symbol, Any}(:message => result, :code => status))
-            end 
-        end 
+            end
+        end
     end
     nothing
 end
