@@ -8,7 +8,7 @@ makedocs(
     sitename="Google Cloud JSON APIs"
 )
 
-deploydocs(
+deploydocs(;
     deps=Deps.pip("pygments", "mkdocs", "python-markdown-math"),
     repo="github.com/JuliaCloud/GoogleCloud.jl.git",
     push_preview=true,
