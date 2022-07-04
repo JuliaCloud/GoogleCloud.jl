@@ -3,7 +3,7 @@
 using Documenter
 using GoogleCloud
 
-makedocs(doctest=true, sitename="Google Cloud JSON APIs")
+makedocs(; doctest=true, sitename="Google Cloud JSON APIs")
 
 deploydocs(;
     deps=Deps.pip("pygments", "mkdocs", "python-markdown-math"),
