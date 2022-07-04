@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Key-Value Store · Google Cloud JSON APIs</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.044/juliamono.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">Google Cloud JSON APIs</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Google Cloud APIs for Julia</a></li><li><a class="tocitem" href="../../api/api/">Google JSON APIs</a></li><li><a class="tocitem" href="../../api/credentials/">Google Cloud Platform Credentials</a></li><li><a class="tocitem" href="../../api/error/">Error Types</a></li><li><a class="tocitem" href="../../api/root/">Google API URLs</a></li><li><a class="tocitem" href="../../api/session/">Google API Authorisation Manager</a></li><li><a class="tocitem" href="../">Custom APIs</a></li><li class="is-active"><a class="tocitem" href>Key-Value Store</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Key-Value Store</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Key-Value Store</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaCloud/GoogleCloud.jl/blob/master/docs/src/custom_api/keystore.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Key-Value-Store"><a class="docs-heading-anchor" href="#Key-Value-Store">Key-Value Store</a><a id="Key-Value-Store-1"></a><a class="docs-heading-anchor-permalink" href="#Key-Value-Store" title="Permalink"></a></h1><p>The <code>KeyStore</code> API is a custom key-value API built on the object storage API. That is, it is not an API offered by the Google Cloud Platform. It is intended to be used to store key-value pairs. Below is a brief tutorial that walks through some typical usage of the <code>KeyStore</code> API.</p><p>First, load the package.</p><pre><code class="language-julia hljs">using GoogleCloud
+session = GoogleSession(expanduser(&quot;~/credentials.json&quot;), [&quot;devstorage.full_control&quot;])</code></pre><p>Define a function for serializing data to Vector{UInt8} before writing to the key-value store. Also define a corresponding deserializer, which is called when reading from the store. </p><pre><code class="language-julia hljs">function serialize_to_uint8_vector(x)
+    io = IOBuffer()
+    serialize(io, x)
+    takebuf_array(io)
+end
+
+deserialize_from_vector(x) = deserialize(IOBuffer(x))</code></pre><p>Initialize the key-value store. In this case our store uses the default options, which synchronizes the data in the remote store with the data in the local store.</p><pre><code class="language-julia hljs">kv_sync = KeyStore{Int, Int}(
+    &quot;kvtest&quot;,                                  # Key-value store name. Created if it doesn&#39;t already exist.
+    session;
+    location    = &quot;US&quot;,
+    empty       = false,                        # Defaults to false. Empty the bucket if it exists.
+    gzip        = true,
+    key_format  = K &lt;: String ? :string : :json # the formating function of key
+    val_format  = V &lt;: String ? :string : :json # the formating function of value
+)</code></pre><p>Run some basic get/set methods, verifying their effects along the way.</p><pre><code class="language-julia hljs"># Get the data from the key-value store. Currently there is no data.
+keys(kv_sync)       # Returns array of keys
+values(kv_sync)     # Returns array of values
+collect(kv_sync)    # Returns array of Pair(key, value)
+
+# Write key-value pairs both locally (determined by use_cache = true) and remotely (determined by use_remote = true)
+kv_sync[1] = 11
+kv_sync[2] = 22
+
+# Verify local store
+kv_sync.cache
+
+# Verify remote store
+clearcache!(kv_sync)    # Clear local store
+kv_sync.cache           # Verify local store is empty again
+collect(kv_sync)        # Pull data from remote store and populate local store
+kv_sync.cache           # Local store now contains our data</code></pre><p>If you are writing frequently then the latency of persisting each write to the remote store may be unacceptably slow. One solution is to do all your writes locally, then persist them remotely with one <code>commit</code>, as follows:</p><pre><code class="language-julia hljs">kv_local = KeyStore{Int, Int}(
+    &quot;kvtest&quot;;                                  # The store name is the same as before.
+    session    = session,                      # As before
+    val_writer = serialize_to_uint8_vector,    # As before
+    val_reader = deserialize_from_vector,      # As before
+    use_remote = false                         # Work locally only, then manually sync with the remote store.
+)
+
+kv_local.cache        # Empty because kv_local is not synchronized with the remote store (because use_remote is false)
+collect(kv_local)     # Empty because use_remote is false, so collect(kv_local) only looks at kv_local.cache
+fetch!(kv_local)      # Manually fetch the data in the remote store
+collect(kv_local)     # Local store is now populated
+kv_local[3] = 33      # Writes to local store only
+kv_sync[3]            # Error because key 3 hasn&#39;t been committed from kv_local to remote store
+kv_local.pending      # List of changes made locally that have not been committed to the remote store
+commit!(kv_local)     # Commit the local changes to the remote store
+kv_local.pending      # The list of pending changes is now empty
+kv_sync[3]            # Now returns 33 from the remote store</code></pre><p>Finally we clean up.</p><pre><code class="language-julia hljs">delete!(kv_sync)      # Error: Can&#39;t delete a non-empty remote store
+reset!(kv_sync)       # Remove all data from remote store. Alternatively, delete!(kv_sync, 1), delete!(kv_sync, 2), etc.
+delete!(kv_sync)      # Detaches local store from remote store and deletes remote store</code></pre><p>Additional methods include:</p><pre><code class="language-julia hljs">clearpending!(kvstore)    # Empty the list of local changes that haven&#39;t been committed to the remote store
+sync!(kvstore)            # Commit local changes to remote store, then fetch data from remote store</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Custom APIs</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.19 on <span class="colophon-date" title="Monday 4 July 2022 19:16">Monday 4 July 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
