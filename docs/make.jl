@@ -11,5 +11,5 @@ makedocs(
 deploydocs(
     deps=Deps.pip("pygments", "mkdocs", "python-markdown-math"),
     repo="github.com/JuliaCloud/GoogleCloud.jl.git",
-    push_preview = true,
+    push_preview=true,
 )
