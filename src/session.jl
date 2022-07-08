@@ -11,8 +11,8 @@ using Dates, Base64
 #using Requests
 using HTTP, HTTP.Messages
 
-import JSON
-import MbedTLS
+using JSON: JSON
+using MbedTLS: MbedTLS
 
 using ..error
 using ..credentials
@@ -147,11 +147,10 @@ and signed using the private key provided in the Google JSON service-account key
 function JWS(credentials::JSONCredentials, claimset::JWTClaimSet, header::JWTHeader=JWTHeader("RS256"))
     payload = "$header.$claimset"
     signature = base64encode(SHA256withRSA(payload, credentials.private_key))
-    "$payload.$signature"
+    return "$payload.$signature"
 end
 
-function token(credentials::JSONCredentials,
-               scopes::AbstractVector{<: AbstractString})
+function token(credentials::JSONCredentials, scopes::AbstractVector{<: AbstractString})
     # construct claim-set from service account email and requested scopes
     claimset = JWTClaimSet(credentials.client_email, scopes)
     data = HTTP.URIs.escapeuri(Dict{Symbol, String}(
