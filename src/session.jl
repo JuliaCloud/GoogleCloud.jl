@@ -6,10 +6,10 @@ module session
 export GoogleSession, authorize
 
 import Base: string, print, show
-using Dates, Base64 
+using Dates, Base64
 
 #using Requests
-using HTTP, HTTP.Messages 
+using HTTP, HTTP.Messages
 
 import JSON
 import MbedTLS
@@ -26,11 +26,14 @@ Sign message using private key with RSASSA-PKCS1-V1_5-SIGN algorithm.
 """
 function SHA256withRSA(message, key::MbedTLS.PKContext)
     lock(mbedtlslock)
-    output = MbedTLS.sign(key, MbedTLS.MD_SHA256,
-                 MbedTLS.digest(MbedTLS.MD_SHA256, message), MbedTLS.MersenneTwister(0)
-                 )
+    output = MbedTLS.sign(
+        key,
+        MbedTLS.MD_SHA256,
+        MbedTLS.digest(MbedTLS.MD_SHA256, message),
+        MbedTLS.MersenneTwister(0),
+    )
     unlock(mbedtlslock)
-    output
+    return output
 end
 
 """
@@ -147,7 +150,7 @@ function JWS(credentials::JSONCredentials, claimset::JWTClaimSet, header::JWTHea
     "$payload.$signature"
 end
 
-function token(credentials::JSONCredentials, 
+function token(credentials::JSONCredentials,
                scopes::AbstractVector{<: AbstractString})
     # construct claim-set from service account email and requested scopes
     claimset = JWTClaimSet(credentials.client_email, scopes)
