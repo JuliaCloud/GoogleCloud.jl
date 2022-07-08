@@ -18,14 +18,20 @@ using ..error
 using ..credentials
 using ..root
 
+global mbedtlslock = ReentrantLock()
 """
     SHA256withRSA(message, key)
 
 Sign message using private key with RSASSA-PKCS1-V1_5-SIGN algorithm.
 """
-SHA256withRSA(message, key::MbedTLS.PKContext) = MbedTLS.sign(key, MbedTLS.MD_SHA256,
-    MbedTLS.digest(MbedTLS.MD_SHA256, message), MbedTLS.MersenneTwister(0)
-)
+function SHA256withRSA(message, key::MbedTLS.PKContext)
+    lock(mbedtlslock)
+    output = MbedTLS.sign(key, MbedTLS.MD_SHA256,
+                 MbedTLS.digest(MbedTLS.MD_SHA256, message), MbedTLS.MersenneTwister(0)
+                 )
+    unlock(mbedtlslock)
+    output
+end
 
 """
 GoogleSession(...)
