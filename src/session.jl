@@ -18,7 +18,7 @@ using ..error
 using ..credentials
 using ..root
 
-global mbedtlslock = ReentrantLock()
+const MBEDTLSLOCK = ReentrantLock()
 """
     SHA256withRSA(message, key)
 
