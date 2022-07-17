@@ -25,14 +25,14 @@ const MBEDTLSLOCK = ReentrantLock()
 Sign message using private key with RSASSA-PKCS1-V1_5-SIGN algorithm.
 """
 function SHA256withRSA(message, key::MbedTLS.PKContext)
-    lock(mbedtlslock)
-    output = MbedTLS.sign(
-        key,
-        MbedTLS.MD_SHA256,
-        MbedTLS.digest(MbedTLS.MD_SHA256, message),
-        MbedTLS.MersenneTwister(0),
-    )
-    unlock(mbedtlslock)
+    @lock MBEDTLSLOCK begin
+        output = MbedTLS.sign(
+            key,
+            MbedTLS.MD_SHA256,
+            MbedTLS.digest(MbedTLS.MD_SHA256, message),
+            MbedTLS.MersenneTwister(0),
+        )
+    end
     return output
 end
 
