@@ -6,6 +6,8 @@ export
 using Dates
 using Printf
 
+using HTTP
+
 import JSON
 import MsgPack
 
@@ -38,7 +40,7 @@ const VAL_FORMAT_MAP = Dict{Symbol, Tuple{Function, Function}}(
 """
 High-level container wrapping a Google Storage bucket
 """
-struct KeyStore{K, V} <: AbstractDict{K, V} 
+struct KeyStore{K, V} <: AbstractDict{K, V}
     bucket_name::String
     session::GoogleSession
     key_decoder::Function
@@ -54,14 +56,14 @@ function KeyStore{K,V}(bucket_name::AbstractString; session::GoogleSession=get_s
                 key_format::Union{Symbol, AbstractString}=K <: String ? :string : :json,
                 val_format::Union{Symbol, AbstractString}=V <: String ? :string : :json,
                 debug=false) where {K,V}
-    
+
     key_encoder, key_decoder = try KEY_FORMAT_MAP[Symbol(key_format)] catch
         error("Unknown key format: $key_format")
     end
     writer, reader = try VAL_FORMAT_MAP[Symbol(val_format)] catch
         error("Unknown value format: $val_format")
     end
-    
+
     store = KeyStore{K,V}(bucket_name, session,
         (x) -> convert(K, key_decoder(x)), key_encoder,
         reader, writer,
@@ -72,15 +74,15 @@ function KeyStore{K,V}(bucket_name::AbstractString; session::GoogleSession=get_s
     store
 end
 
-function connect!(store::KeyStore; location::AbstractString="US", 
+function connect!(store::KeyStore; location::AbstractString="US",
                   empty::Bool=false, debug=false)
-    response = storage(:Bucket, :get, store.bucket_name; 
-                       session=store.session, fields="", debug=debug) 
+    response = storage(:Bucket, :get, store.bucket_name;
+                       session=store.session, fields="", debug=debug)
     if iserror(response)
         code = response[:error][:code]
         if code == 404  # not found (available)
-            response = storage(:Bucket, :insert; session=store.session, 
-                               data=Dict(:name => store.bucket_name, :location => location), 
+            response = storage(:Bucket, :insert; session=store.session,
+                               data=Dict(:name => store.bucket_name, :location => location),
                                fields="", debug=debug)
             if iserror(response)
                 error("Unable to create bucket: $(response[:error][:message])")
@@ -145,9 +147,17 @@ function Base.get(store::KeyStore{K, V}, key::K, default) where {K, V}
 end
 
 function Base.haskey(store::KeyStore{K, V}, key::K) where {K, V}
-    name = store.key_encoder(key)
-    response = storage(:Object, :get, store.bucket_name, name; session=store.session, alt="", fields="")
-    !iserror(response)
+    try
+        name = store.key_encoder(key)
+        response = storage(:Object, :get, store.bucket_name, name; session=store.session, alt="", fields="")
+        !iserror(response)
+    catch e
+        if typeof(e) == HTTP.ExceptionRequest.StatusError
+            false
+        else
+            rethrow(e)
+        end
+    end
 end
 
 # WARNING: potential for race condition. don't zip keys with values... use collect instead
@@ -167,7 +177,7 @@ end
 # avoiding race condition where values might have been deleted after keys were generated
 @inline function Base.values(store::KeyStore{K, V}) where {K, V}
     (x for x in (get(store, key, Nothing) for key in keys(store)) if x !== Voide)
-end 
+end
 
 function Base.delete!(store::KeyStore{K, V}, key::K) where {K, V}
     name = store.key_encoder(key)
@@ -225,7 +235,7 @@ end
 
 #function Base.iterate(store::KeyStore{K, V}) where {K, V}
 #
-#end 
+#end
 #function Base.start(store::KeyStore{K, V}) where {K, V}
 #    key_list = collect(keys(store))
 #    return (fast_forward(store, key_list), key_list)
@@ -241,12 +251,12 @@ end
 #    pair === nothing
 #end
 #
-@inline function Base.IteratorSize(::Type{KeyStore{K, V}}) where {K, V} 
-    Base.SizeUnknown() 
-end 
+@inline function Base.IteratorSize(::Type{KeyStore{K, V}}) where {K, V}
+    Base.SizeUnknown()
+end
 
 # notifications
-function watch(store::KeyStore{K, V}, channel_id::AbstractString, 
+function watch(store::KeyStore{K, V}, channel_id::AbstractString,
                address::AbstractString) where {K, V}
     if !isempty(store.channel)
         error("Already watching: $store.channel")
