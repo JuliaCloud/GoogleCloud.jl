@@ -3,7 +3,7 @@ Google Cloud Platform service-account API credentials.
 """
 module credentials
 
-export Credentials, JSONCredentials, MetadataCredentials
+export Credentials, JSONCredentials, MetadataCredentials, NoCredentials
 
 import Base: show, print
 import JSON
@@ -126,4 +126,8 @@ function print(io::IO, x::Credentials)
 end
 show(io::IO, x::JSONCredentials) = print(io, x)
 
+struct NoCredentials <: Credentials
 end
+
+end
+

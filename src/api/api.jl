@@ -239,9 +239,13 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
 
     # obtain and use access token
     auth = authorize(session)
-    headers = Dict{String, String}(
-        "Authorization" => "$(auth[:token_type]) $(auth[:access_token])"
-    )
+    headers = if isnothing(auth)
+        Dict{String, String}()
+    else
+        Dict{String, String}(
+            "Authorization" => "$(auth[:token_type]) $(auth[:access_token])"
+        )
+    end
     params = Dict(params)
 
     # check if data provided when not expected
@@ -273,7 +277,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
 
     # merge in default parameters and evaluate any expressions
     params = merge!(copy(method.default_params), Dict(params))
-    extra = Dict(:project_id => session.credentials.project_id)
+    extra = hasproperty(session.credentials, :project_id) ? Dict(:project_id => session.credentials.project_id) : Dict()
     for (key, val) in params
         if isa(val, Symbol)
             params[key] = extra[val]

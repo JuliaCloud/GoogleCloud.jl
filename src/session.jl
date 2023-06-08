@@ -195,4 +195,6 @@ function authorize(session::GoogleSession; cache::Bool=true)
     authorization
 end
 
+authorize(session::GoogleSession{T}) where {T <: NoCredentials} = nothing
+
 end
