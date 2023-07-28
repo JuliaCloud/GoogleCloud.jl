@@ -362,5 +362,6 @@ include("container.jl")
 include("pubsub.jl")
 include("logging.jl")
 include("datastore.jl")
+include("text_service.jl")
 
 end
