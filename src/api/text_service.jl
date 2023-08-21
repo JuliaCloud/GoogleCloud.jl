@@ -1,9 +1,12 @@
 module _text_service
 
-export text_service
+export text_service, BISON_TEXT_MODEL_NAME, GEKKO_EMBEDDING_MODEL_NAME
 
 using ..api
 using ...root
+
+const BISON_TEXT_MODEL_NAME = "text-bison"
+const GEKKO_EMBEDDING_MODEL_NAME = "textembedding-gecko"
 
 
 text_service = APIRoot(
@@ -13,9 +16,8 @@ text_service = APIRoot(
     "cloud-platform.read-only" => "Read only"
   ),
   PALM=APIResource(
-    "locations/{region}/publishers/google/models",
-    generate_text=APIMethod(:POST, "text-bison:predict", "Generate text from prompt"),
-    generate_embedding=APIMethod(:POST, "textembedding-gecko:predict", "Generate text from prompt")
+    "locations/{region}/publishers/google/models/{model_name}:predict",
+    predict=APIMethod(:POST, "", "Perform an online prediction.")
   )
 )
 
