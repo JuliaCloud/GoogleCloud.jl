@@ -12,6 +12,7 @@ import MbedTLS
 import Libz
 import JSON
 using Markdown
+using Mocking
 
 using ..session
 using ..error
@@ -238,7 +239,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
     end
 
     # obtain and use access token
-    auth = authorize(session)
+    auth = @mock authorize(session)
     headers = Dict{String, String}(
         "Authorization" => "$(auth[:token_type]) $(auth[:access_token])"
     )
@@ -288,7 +289,7 @@ function execute(session::GoogleSession, resource::APIResource, method::APIMetho
             @info("Attempt: $attempt")
         end
         res = try
-            HTTP.request(string(method.verb),
+            @mock HTTP.request(string(method.verb),
                         path_replace(method.path, path_args), headers, data;
                         query=params )
         catch e

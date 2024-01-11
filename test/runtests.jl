@@ -1,5 +1,6 @@
 using GoogleCloud
-using Test 
+using Test
 
 include("api.jl")
-#include("storage.jl")
+# include("storage.jl")
+include("text_service.jl")
