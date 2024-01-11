@@ -1,0 +1,59 @@
+{
+  "metadata": {
+    "tokenMetadata": {
+      "inputTokenCount": {
+        "totalTokens": 3,
+        "totalBillableCharacters": 17
+      },
+      "outputTokenCount": {
+        "totalTokens": 200,
+        "totalBillableCharacters": 837
+      }
+    }
+  },
+  "predictions": [
+    {
+      "safetyAttributes": {
+        "scores": [
+          0.1,
+          0.1
+        ],
+        "categories": [
+          "Finance",
+          "Health"
+        ],
+        "safetyRatings": [
+          {
+            "probabilityScore": 0,
+            "severity": "NEGLIGIBLE",
+            "category": "Dangerous Content",
+            "severityScore": 0
+          },
+          {
+            "probabilityScore": 0,
+            "severity": "NEGLIGIBLE",
+            "category": "Harassment",
+            "severityScore": 0
+          },
+          {
+            "probabilityScore": 0,
+            "severity": "NEGLIGIBLE",
+            "category": "Hate Speech",
+            "severityScore": 0
+          },
+          {
+            "probabilityScore": 0,
+            "severity": "NEGLIGIBLE",
+            "category": "Sexually Explicit",
+            "severityScore": 0
+          }
+        ],
+        "blocked": false
+      },
+      "content": " As an AI language model, I don't have a physical presence or personal experiences like humans do. However, I can provide you with information about my capabilities and the technology behind me.\n\nI am a large language model trained by Google. My training data includes a vast corpus of text and code from the web, books, and other sources. This training enables me to understand and generate human language, answer questions, write creatively, and assist with various tasks.\n\nMy responses are based on the patterns and knowledge I have learned from the training data. I do not have emotions, opinions, or personal biases. My goal is to provide accurate and informative responses based on the information available to me.\n\nI am continuously learning and improving as I interact with users and receive feedback. The more I am used, the better I become at understanding and responding to human requests.\n\nIf you have any specific questions or tasks you would like assistance with, feel free to ask. I'll do my best",
+      "citationMetadata": {
+        "citations": []
+      }
+    }
+  ]
+}
